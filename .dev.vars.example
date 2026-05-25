@@ -1,0 +1,9 @@
+QWEN_API_KEY="sk-your-qwen-or-openrouter-api-key"
+QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+QWEN_MODEL="qwen2.5-vl-72b-instruct"
+
+# 可选：如果你有自己微调并部署的 Qwen2.5-VL 服务，使用下面这一组。
+# QWEN_BACKEND_MODE="self-hosted"
+# QWEN_SELF_HOSTED_URL="https://your-gpu-api.example.com/v1/breastcare/diagnose"
+# QWEN_SELF_HOSTED_API_KEY="your-private-backend-token"
+# QWEN_SELF_HOSTED_MODEL="breastcare-qwen2.5-vl-lora"

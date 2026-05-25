@@ -304,6 +304,7 @@ function generateReport(fields, imageQc, reportQc, tags, diagnosis, confidence) 
 ${tags.map((tag, index) => `${index + 1}. ${tag.label}`).join("\n")}
 
 五、模型预测
+推理来源：${diagnosis.source || "规则推理兜底"}
 BI-RADS 输出：${diagnosis.birads}
 Cancer 良恶性预测：${diagnosis.cancer}
 管理导向风险分层：${diagnosis.group}
@@ -380,6 +381,33 @@ async function analyzeImageFile(file) {
   } finally {
     URL.revokeObjectURL(imageUrl);
   }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSide = 1200;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.86));
+      };
+      img.onerror = reject;
+      img.src = String(reader.result || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function Header({ page, setPage }) {
@@ -540,6 +568,7 @@ function DiagnosisWorkspace() {
   const [fields, setFields] = useState(DEFAULT_FIELDS);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState("");
   const [imageQc, setImageQc] = useState({
     score: 0,
     brightness: "-",
@@ -550,9 +579,14 @@ function DiagnosisWorkspace() {
   const [tags, setTags] = useState(detectStandardTags(DEFAULT_FIELDS));
   const [newTag, setNewTag] = useState("");
   const [copyState, setCopyState] = useState("复制报告文本");
+  const [backendMode, setBackendMode] = useState("auto");
+  const [modelDiagnosis, setModelDiagnosis] = useState(null);
+  const [modelStatus, setModelStatus] = useState("idle");
+  const [modelError, setModelError] = useState("");
 
   const reportQc = useMemo(() => analyzeReportCompleteness(fields), [fields]);
-  const diagnosis = useMemo(() => predictDiagnosis(fields), [fields]);
+  const ruleDiagnosis = useMemo(() => ({ ...predictDiagnosis(fields), source: "规则推理兜底" }), [fields]);
+  const diagnosis = modelDiagnosis || ruleDiagnosis;
   const confidence = useMemo(() => {
     const ruleStability = 78 + Math.min(diagnosis.suspiciousScore, 5) * 3;
     return Math.round(clamp(0.34 * imageQc.score + 0.36 * reportQc.score + 0.3 * ruleStability) * 10) / 10;
@@ -567,12 +601,17 @@ function DiagnosisWorkspace() {
     const url = URL.createObjectURL(imageFile);
     setImagePreview(url);
     analyzeImageFile(imageFile).then(setImageQc);
+    fileToDataUrl(imageFile).then(setImageDataUrl);
     return () => URL.revokeObjectURL(url);
   }, [imageFile]);
 
-  const updateField = (key, value) => setFields((current) => ({ ...current, [key]: value }));
+  const updateField = (key, value) => {
+    setModelDiagnosis(null);
+    setFields((current) => ({ ...current, [key]: value }));
+  };
   const loadSample = (key) => {
     const next = SAMPLE_CASES[key].fields;
+    setModelDiagnosis(null);
     setFields(next);
     setTags(detectStandardTags(next));
     setActiveStep(1);
@@ -586,6 +625,35 @@ function DiagnosisWorkspace() {
     if (!label) return;
     setTags((current) => [...current, { id: `${Date.now()}-${label}`, label, confirmed: false, source: "医生新增" }]);
     setNewTag("");
+  };
+  const runRealQwenDiagnosis = async () => {
+    setModelStatus("running");
+    setModelError("");
+    try {
+      const response = await fetch("/api/diagnose", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          mode: backendMode === "auto" ? undefined : backendMode,
+          imageDataUrl,
+          fields,
+          reportText: getReportText(fields),
+          tags: tags.map(({ label, source, confirmed }) => ({ label, source, confirmed }))
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || "真实模型接口调用失败。");
+      }
+      setModelDiagnosis({
+        ...payload.diagnosis,
+        source: payload.mode === "self-hosted" ? `自部署 Qwen2.5-VL：${payload.model}` : `Qwen API：${payload.model}`
+      });
+      setModelStatus("success");
+    } catch (error) {
+      setModelError(error instanceof Error ? error.message : "真实模型接口调用失败。");
+      setModelStatus("error");
+    }
   };
   const copyReport = async () => {
     await navigator.clipboard.writeText(reportText);
@@ -663,6 +731,11 @@ function DiagnosisWorkspace() {
               reportQc={reportQc}
               confidence={confidence}
               tags={tags}
+              backendMode={backendMode}
+              setBackendMode={setBackendMode}
+              modelStatus={modelStatus}
+              modelError={modelError}
+              onRunModel={runRealQwenDiagnosis}
               onNext={() => setActiveStep(4)}
             />
           )}
@@ -806,7 +879,19 @@ function StepThree({ tags, setTags, newTag, setNewTag, addTag, onNext }) {
   );
 }
 
-function StepFour({ diagnosis, imageQc, reportQc, confidence, tags, onNext }) {
+function StepFour({
+  diagnosis,
+  imageQc,
+  reportQc,
+  confidence,
+  tags,
+  backendMode,
+  setBackendMode,
+  modelStatus,
+  modelError,
+  onRunModel,
+  onNext
+}) {
   const radarData = [
     { metric: "图像质量", value: imageQc.score },
     { metric: "报告完整性", value: reportQc.score },
@@ -816,6 +901,38 @@ function StepFour({ diagnosis, imageQc, reportQc, confidence, tags, onNext }) {
   return (
     <div>
       <SectionTitle icon={BrainCircuit} title="Step 4 多模态智能诊断" subtitle="采用结构化证据列表输出，避免长篇自由医学推理。" />
+      <div className="mb-5 rounded-2xl border border-[#CDE8F7] bg-[#F8FBFF] p-5">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <h3 className="text-lg font-black text-clinic-navy">真实 Qwen2.5-VL 后端调用</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              支持两种后端：第三方 OpenAI-compatible Qwen API，或你自己微调并部署的 Qwen2.5-VL GPU 服务。
+              如果后端环境变量尚未配置，本页面仍会保留规则推理兜底结果。
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[220px_auto]">
+            <select className="field" value={backendMode} onChange={(event) => setBackendMode(event.target.value)}>
+              <option value="auto">自动选择后端</option>
+              <option value="openai-compatible">Qwen API</option>
+              <option value="self-hosted">自部署 Qwen2.5-VL</option>
+            </select>
+            <button className="primary-button" onClick={onRunModel} disabled={modelStatus === "running"}>
+              <BrainCircuit className="h-4 w-4" />
+              {modelStatus === "running" ? "模型推理中..." : "调用真实模型"}
+            </button>
+          </div>
+        </div>
+        {modelStatus === "success" && (
+          <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+            真实模型结果已回填到当前诊断工作台，报告导出将使用该结果。
+          </div>
+        )}
+        {modelStatus === "error" && (
+          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold leading-6 text-red-700">
+            {modelError}
+          </div>
+        )}
+      </div>
       <div className="grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
         <RiskGauge diagnosis={diagnosis} />
         <div className="space-y-4">
@@ -887,6 +1004,7 @@ function SummaryPanel({ diagnosis, imageQc, reportQc, confidence }) {
         <div>
           <p className="text-sm font-bold text-slate-500">AI Diagnostic Summary</p>
           <h2 className="mt-1 text-2xl font-black text-clinic-navy">{diagnosis.birads}</h2>
+          <p className="mt-1 text-xs font-bold text-slate-500">{diagnosis.source || "规则推理兜底"}</p>
         </div>
         <span className="rounded-full px-3 py-1.5 text-sm font-black text-white" style={{ background: color }}>
           {diagnosis.riskLevel}
@@ -942,7 +1060,7 @@ function EvidencePanel({ diagnosis, tags }) {
 }
 
 function ArchitecturePage() {
-  const flow = ["乳腺超声图像 + 结构化报告", "BioMedCLIP 视觉蒸馏", "Qwen2.5-VL", "LoRA 指令微调", "Checklist Prompt", "Label-only Output"];
+  const flow = ["React 前端", "Cloudflare Pages Function", "Qwen API 或自部署 GPU 服务", "Qwen2.5-VL + LoRA", "Checklist Prompt", "Label-only Output"];
   const ablation = [
     { setting: "Qwen2.5-VL baseline", birads: 0.5812, cancer: 0.9534 },
     { setting: "+ LoRA", birads: 0.6128, cancer: 0.9716 },
@@ -958,8 +1076,9 @@ function ArchitecturePage() {
         </div>
         <h1 className="mt-4 text-4xl font-black text-clinic-navy lg:text-5xl">多模态诊断技术架构</h1>
         <p className="mt-4 max-w-4xl leading-8 text-slate-600">
-          系统采用视觉蒸馏与指令微调结合的技术路线，将乳腺超声图像和结构化报告统一输入，
-          通过 Checklist Prompt 约束输出为标签级诊断结果，降低自由文本医学幻觉风险。
+          系统采用“前端工作流 + Cloudflare 安全代理 + 真实多模态模型服务”的部署路线。
+          模型可以使用第三方 Qwen2.5-VL API，也可以调用你自己微调并部署在 GPU 服务器上的 Qwen2.5-VL + LoRA 服务。
+          前端不保存 API Key，通过 Checklist Prompt 约束输出为标签级诊断结果，降低自由文本医学幻觉风险。
         </p>
       </div>
 
