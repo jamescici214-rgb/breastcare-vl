@@ -1,0 +1,18 @@
+{
+  "case_id": "case_002",
+  "case_name": "中度可疑示例病例",
+  "structured_fields": {
+    "age": 49,
+    "location": "左乳内上象限",
+    "size": "18 mm × 12 mm",
+    "shape": "分叶状",
+    "margin": "欠清",
+    "echo": "低回声",
+    "aspect_ratio_gt_1": "否",
+    "calcification": "点状强回声",
+    "posterior_echo": "无明显改变",
+    "blood_flow": "少量",
+    "axillary_lymph_node": "正常"
+  },
+  "report_text": "左乳内上象限见低回声结节，大小约18 mm × 12 mm，形态呈分叶状，边缘欠清，内部可见点状强回声，纵横比小于1，后方回声未见明显改变，CDFI示少量血流信号。腋窝淋巴结未见明显异常。建议进一步专科评估。"
+}

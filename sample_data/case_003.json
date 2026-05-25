@@ -1,0 +1,18 @@
+{
+  "case_id": "case_003",
+  "case_name": "高度可疑示例病例",
+  "structured_fields": {
+    "age": 58,
+    "location": "左乳外上象限",
+    "size": "26 mm × 21 mm",
+    "shape": "不规则",
+    "margin": "毛刺",
+    "echo": "混合回声",
+    "aspect_ratio_gt_1": "是",
+    "calcification": "微钙化",
+    "posterior_echo": "声影",
+    "blood_flow": "丰富",
+    "axillary_lymph_node": "异常"
+  },
+  "report_text": "左乳外上象限可见混合回声肿块，大小约26 mm × 21 mm，形态不规则，边缘毛刺，纵横比大于1，内部可见微钙化，后方伴声影，CDFI示丰富血流信号。左侧腋窝可见形态异常淋巴结。声像图表现高度可疑恶性，建议尽快行乳腺专科进一步检查及组织学取样。"
+}

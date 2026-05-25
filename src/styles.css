@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #0f172a;
+  background: #f6fafd;
+  font-family: Inter, "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f6fafd;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .clinical-card {
+    @apply rounded-2xl border border-clinic-line bg-white shadow-soft;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-[#CFE0EC] bg-white px-3 py-2.5 text-sm text-clinic-text outline-none transition focus:border-clinic-blue focus:ring-4 focus:ring-blue-100;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-slate-700;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-[#CDE8F7] bg-white px-3 py-1.5 text-sm font-semibold text-[#0B5268];
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-clinic-blue to-clinic-teal px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:shadow-xl;
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[#BFD9EC] bg-white px-4 py-3 text-sm font-bold text-clinic-navy transition hover:border-clinic-blue hover:text-clinic-blue;
+  }
+}

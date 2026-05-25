@@ -1,0 +1,18 @@
+{
+  "case_id": "case_001",
+  "case_name": "偏良性示例病例",
+  "structured_fields": {
+    "age": 36,
+    "location": "右乳外上象限",
+    "size": "9 mm × 6 mm",
+    "shape": "规则",
+    "margin": "清楚",
+    "echo": "低回声",
+    "aspect_ratio_gt_1": "否",
+    "calcification": "无",
+    "posterior_echo": "无明显改变",
+    "blood_flow": "少量",
+    "axillary_lymph_node": "正常"
+  },
+  "report_text": "右乳外上象限可见低回声结节，大小约9 mm × 6 mm，形态规则，边缘清楚，纵横比小于1，未见明显钙化，后方回声无明显改变，CDFI示少量血流信号。双侧腋窝未见异常肿大淋巴结。考虑良性可能，建议随访。"
+}
