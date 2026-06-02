@@ -14,12 +14,9 @@ import {
   ImagePlus,
   Layers3,
   Microscope,
-  Pencil,
-  Plus,
   ShieldCheck,
   Sparkles,
   Stethoscope,
-  Trash2,
   Workflow
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -47,7 +44,6 @@ const SAMPLE_CASES = {
       age: 36,
       location: "右乳外上象限",
       size: "9 mm × 6 mm",
-      shape: "规则",
       margin: "清楚",
       echo: "低回声",
       aspectRatio: "否",
@@ -55,9 +51,9 @@ const SAMPLE_CASES = {
       posteriorEcho: "无明显改变",
       bloodFlow: "少量",
       lymphNode: "正常",
-      structuredReport: "右乳外上象限低回声结节，形态规则，边缘清楚，纵横比小于1。",
+      structuredReport: "右乳外上象限低回声结节，边缘清楚，纵横比小于1。",
       rawDescription:
-        "右乳外上象限可见低回声结节，大小约9 mm × 6 mm，形态规则，边缘清楚，未见明显钙化，CDFI示少量血流。"
+        "右乳外上象限可见低回声结节，大小约9 mm × 6 mm，边缘清楚，未见明显钙化，CDFI示少量血流。"
     }
   },
   case_002: {
@@ -66,7 +62,6 @@ const SAMPLE_CASES = {
       age: 49,
       location: "左乳内上象限",
       size: "18 mm × 12 mm",
-      shape: "分叶状",
       margin: "欠清",
       echo: "低回声",
       aspectRatio: "否",
@@ -76,7 +71,7 @@ const SAMPLE_CASES = {
       lymphNode: "正常",
       structuredReport: "左乳内上象限低回声结节，分叶状，边缘欠清，内部点状强回声。",
       rawDescription:
-        "左乳内上象限见低回声结节，形态呈分叶状，边缘欠清，内部可见点状强回声，建议进一步专科评估。"
+        "左乳内上象限见低回声结节，边缘欠清，内部可见点状强回声，建议进一步专科评估。"
     }
   },
   case_003: {
@@ -85,7 +80,6 @@ const SAMPLE_CASES = {
       age: 58,
       location: "左乳外上象限",
       size: "26 mm × 21 mm",
-      shape: "不规则",
       margin: "毛刺",
       echo: "混合回声",
       aspectRatio: "是",
@@ -93,9 +87,9 @@ const SAMPLE_CASES = {
       posteriorEcho: "声影",
       bloodFlow: "丰富",
       lymphNode: "异常",
-      structuredReport: "左乳外上象限混合回声肿块，形态不规则，边缘毛刺，纵横比大于1，微钙化，声影，血流丰富。",
+      structuredReport: "左乳外上象限混合回声肿块，边缘毛刺，纵横比大于1，微钙化，声影，血流丰富。",
       rawDescription:
-        "左乳外上象限可见混合回声肿块，形态不规则，边缘毛刺，纵横比大于1，内部微钙化，后方伴声影，CDFI示丰富血流，左侧腋窝淋巴结异常。"
+        "左乳外上象限可见混合回声肿块，边缘毛刺，纵横比大于1，内部微钙化，后方伴声影，CDFI示丰富血流，左侧腋窝淋巴结异常。"
     }
   }
 };
@@ -104,7 +98,6 @@ const DEFAULT_FIELDS = {
   age: 45,
   location: "左乳外上象限",
   size: "12 mm × 8 mm",
-  shape: "",
   margin: "",
   echo: "",
   aspectRatio: "",
@@ -120,7 +113,6 @@ const REQUIRED_FEATURES = [
   ["age", "年龄"],
   ["location", "位置"],
   ["size", "大小"],
-  ["shape", "形态"],
   ["margin", "边缘"],
   ["echo", "回声"],
   ["aspectRatio", "纵横比"],
@@ -134,7 +126,6 @@ const STEP_ONE_REQUIRED = [
   ["age", "年龄"],
   ["location", "病灶位置"],
   ["size", "病灶大小"],
-  ["shape", "形态"],
   ["margin", "边缘"],
   ["echo", "回声"],
   ["aspectRatio", "纵横比"],
@@ -153,7 +144,6 @@ const RISK_COLORS = {
 const FLOW_STEPS = [
   "病例数据录入",
   "系统化超声特征补全",
-  "BI-RADS 标准词映射",
   "多模态智能诊断",
   "标准化报告导出"
 ];
@@ -203,7 +193,6 @@ function getReportText(fields) {
 function analyzeReportCompleteness(fields) {
   const text = getReportText(fields);
   const keywordMap = {
-    shape: ["形态", "规则", "不规则", "分叶"],
     margin: ["边缘", "边界", "欠清", "模糊", "毛刺", "清楚", "不清晰", "毛刺状"],
     echo: ["回声", "低回声", "混合回声", "等回声", "高回声", "无回声"],
     aspectRatio: ["纵横比", "大于1", "小于1", "大于 1", "无"],
@@ -224,7 +213,7 @@ function analyzeReportCompleteness(fields) {
     missing,
     suggestions:
       missing.length === 0
-        ? ["关键超声征象字段完整，可进入标准词映射。"]
+        ? ["关键超声征象字段完整，可进入多模态诊断。"]
         : missing.map((item) => `建议补充${item}信息，并优先使用 BI-RADS 标准描述。`)
   };
 }
@@ -243,7 +232,6 @@ function detectStandardTags(fields) {
   if (fields.aspectRatio === "是") add("纵横比>1");
   if (["点状强回声", "微钙化", "点状钙化"].includes(fields.calcification)) add(normalizeExcelValue(fields.calcification));
   if (fields.bloodFlow && fields.bloodFlow !== "无") add(`血流${fields.bloodFlow}`);
-  if (fields.shape === "不规则" || text.includes("形态不规则")) add("形态不规则");
   if (["声影", "衰减"].includes(fields.posteriorEcho) || text.includes("声影")) add(`后方回声${normalizeExcelValue(fields.posteriorEcho)}`);
   if (["异常", "肿大"].includes(fields.lymphNode) || text.includes("淋巴结异常")) add("腋窝淋巴结异常");
 
@@ -257,7 +245,6 @@ function predictDiagnosis(fields) {
     if (condition) evidence.push({ label, category, source });
   };
 
-  add(fields.shape === "不规则", "形态不规则", "形态", "结构化征象");
   add(["欠清", "模糊", "毛刺", "不清晰", "毛刺状"].includes(fields.margin), `边缘${normalizeExcelValue(fields.margin)}`, "边缘", "结构化征象");
   add(fields.aspectRatio === "是", "纵横比>1", "生长方向", "结构化征象");
   add(["点状强回声", "微钙化", "点状钙化"].includes(fields.calcification), normalizeExcelValue(fields.calcification), "钙化", "结构化征象");
@@ -347,7 +334,7 @@ function generateReport(fields, imageQc, reportQc, tags, diagnosis, confidence) 
 报告完整性评分：${reportQc.score}/100
 缺失字段：${reportQc.missing.length ? reportQc.missing.join("、") : "未发现关键字段缺失"}
 
-四、BI-RADS 标准映射
+四、标准化证据标签
 ${tags.map((tag, index) => `${index + 1}. ${tag.label}`).join("\n")}
 
 五、模型预测
@@ -498,7 +485,7 @@ function LandingPage({ setPage }) {
   const capabilityCards = [
     ["多模态诊断", "融合乳腺超声图像、结构化报告和原始描述，输出可解释筛查结果。", BrainCircuit],
     ["BI-RADS 标准化", "将基层报告描述映射为标准特征标签，减少非标准表达带来的偏差。", ClipboardCheck],
-    ["质控闭环", "覆盖图像质量、报告完整性、标准词映射和诊断可信度评分。", ShieldCheck],
+    ["质控闭环", "覆盖图像质量、报告完整性、结构化证据和诊断可信度评分。", ShieldCheck],
     ["报告生成", "生成面向医生复核的 AI 辅助筛查报告，支持复制和导出。", FileText]
   ];
   const route = ["乳腺超声图像", "BioMedCLIP 蒸馏", "Qwen2.5-VL", "LoRA", "Checklist Prompt", "Label-only Output"];
@@ -516,7 +503,7 @@ function LandingPage({ setPage }) {
                 乳影智诊 BreastCare-VL
               </h1>
               <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                以五阶段临床工作流组织病例录入、超声特征补全、BI-RADS 标准映射、多模态智能诊断和报告导出，
+                以四阶段临床工作流组织病例录入、超声特征补全、多模态智能诊断和报告导出，
                 用结构化证据替代冗长自由推理，让比赛评委能清楚看到 AI 在基层筛查中的价值闭环。
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
@@ -583,7 +570,7 @@ function MetricBlock({ label, value, tone }) {
 function Stepper({ activeStep, setActiveStep, maxAllowedStep }) {
   return (
     <div className="clinical-card p-4">
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-4">
         {FLOW_STEPS.map((step, index) => {
           const active = activeStep === index;
           const locked = index > maxAllowedStep;
@@ -633,7 +620,6 @@ function DiagnosisWorkspace() {
     message: "未上传图像，暂无法完成图像质量控制。"
   });
   const [tags, setTags] = useState(detectStandardTags(DEFAULT_FIELDS));
-  const [newTag, setNewTag] = useState("");
   const [copyState, setCopyState] = useState("复制报告文本");
   const [backendMode, setBackendMode] = useState("auto");
   const [modelDiagnosis, setModelDiagnosis] = useState(null);
@@ -648,16 +634,14 @@ function DiagnosisWorkspace() {
   const reportQc = useMemo(() => analyzeReportCompleteness(fields), [fields]);
   const ruleDiagnosis = useMemo(() => ({ ...predictDiagnosis(fields), source: "规则推理兜底" }), [fields]);
   const diagnosis = modelDiagnosis || ruleDiagnosis;
-  const tagsComplete = tags.length > 0 && tags.every((tag) => !isMissing(tag.label) && tag.confirmed);
   const modelAttempted = modelStatus === "success" || modelStatus === "error";
   const maxAllowedStep = useMemo(() => {
     let step = 0;
     if (stepOneMissing.length === 0) step = 1;
     if (step >= 1 && reportQc.missing.length === 0) step = 2;
-    if (step >= 2 && tagsComplete) step = 3;
-    if (step >= 3 && modelAttempted) step = 4;
+    if (step >= 2 && modelAttempted) step = 3;
     return Math.min(step, workflowGate);
-  }, [modelAttempted, reportQc.missing.length, stepOneMissing.length, tagsComplete, workflowGate]);
+  }, [modelAttempted, reportQc.missing.length, stepOneMissing.length, workflowGate]);
   const confidence = useMemo(() => {
     const ruleStability = 78 + Math.min(diagnosis.suspiciousScore, 5) * 3;
     return Math.round(clamp(0.34 * imageQc.score + 0.36 * reportQc.score + 0.3 * ruleStability) * 10) / 10;
@@ -685,6 +669,20 @@ function DiagnosisWorkspace() {
     setWorkflowGate(0);
     setFields((current) => ({ ...current, [key]: value }));
   };
+  const resetImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    setImageDataUrl("");
+    setImageQc({
+      score: 0,
+      brightness: "-",
+      contrast: "-",
+      sharpness: "-",
+      message: "未上传图像，暂无法完成图像质量控制。"
+    });
+    setModelDiagnosis(null);
+    setWorkflowGate(0);
+  };
   const loadSample = (key) => {
     const next = SAMPLE_CASES[key].fields;
     setModelDiagnosis(null);
@@ -697,12 +695,6 @@ function DiagnosisWorkspace() {
     setTags(detectStandardTags(fields));
     setWorkflowGate((current) => Math.max(current, 2));
     setActiveStep(2);
-  };
-  const addTag = () => {
-    const label = newTag.trim();
-    if (!label) return;
-    setTags((current) => [...current, { id: `${Date.now()}-${label}`, label, confirmed: false, source: "医生新增" }]);
-    setNewTag("");
   };
   const runRealQwenDiagnosis = async () => {
     setModelStatus("running");
@@ -764,9 +756,9 @@ function DiagnosisWorkspace() {
             <Stethoscope className="h-4 w-4 text-clinic-blue" />
             Clinical Workflow Diagnosis Workspace
           </div>
-          <h1 className="mt-4 text-3xl font-black text-clinic-navy lg:text-5xl">五阶段乳腺超声诊断工作台</h1>
+          <h1 className="mt-4 text-3xl font-black text-clinic-navy lg:text-5xl">四阶段乳腺超声诊断工作台</h1>
           <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-            从病例录入到标准化报告导出，按临床路径展示模型如何完成质控、标准映射、多模态诊断和证据输出。
+            从病例录入到标准化报告导出，按临床路径展示模型如何完成质控、多模态诊断和证据输出。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -788,6 +780,7 @@ function DiagnosisWorkspace() {
               updateField={updateField}
               imagePreview={imagePreview}
               setImageFile={setImageFile}
+              resetImage={resetImage}
               missingItems={stepOneMissing}
               onNext={() => {
                 setWorkflowGate((current) => Math.max(current, 1));
@@ -797,20 +790,6 @@ function DiagnosisWorkspace() {
           )}
           {activeStep === 1 && <StepTwo reportQc={reportQc} onNext={remapTags} />}
           {activeStep === 2 && (
-            <StepThree
-              tags={tags}
-              setTags={setTags}
-              newTag={newTag}
-              setNewTag={setNewTag}
-              addTag={addTag}
-              canNext={tagsComplete}
-              onNext={() => {
-                setWorkflowGate((current) => Math.max(current, 3));
-                setActiveStep(3);
-              }}
-            />
-          )}
-          {activeStep === 3 && (
             <StepFour
               diagnosis={diagnosis}
               imageQc={imageQc}
@@ -824,12 +803,12 @@ function DiagnosisWorkspace() {
               onRunModel={runRealQwenDiagnosis}
               canNext={modelAttempted}
               onNext={() => {
-                setWorkflowGate((current) => Math.max(current, 4));
-                setActiveStep(4);
+                setWorkflowGate((current) => Math.max(current, 3));
+                setActiveStep(3);
               }}
             />
           )}
-          {activeStep === 4 && (
+          {activeStep === 3 && (
             <StepFive reportText={reportText} copyReport={copyReport} copyState={copyState} exportWord={exportWord} exportPdf={exportPdf} />
           )}
         </section>
@@ -843,7 +822,7 @@ function DiagnosisWorkspace() {
   );
 }
 
-function StepOne({ fields, updateField, imagePreview, setImageFile, missingItems, onNext }) {
+function StepOne({ fields, updateField, imagePreview, setImageFile, resetImage, missingItems, onNext }) {
   const canNext = missingItems.length === 0;
   return (
     <div>
@@ -852,15 +831,13 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, missingItems
         <div>
           <label className="label">乳腺超声图像上传</label>
           <label
-            className={`flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-[#BFD9EC] bg-[#F8FBFF] p-5 text-center transition ${
-              imagePreview ? "cursor-not-allowed" : "cursor-pointer hover:border-clinic-blue"
-            }`}
+            className="flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#BFD9EC] bg-[#F8FBFF] p-5 text-center transition hover:border-clinic-blue"
           >
             {imagePreview ? (
               <>
                 <img src={imagePreview} alt="乳腺超声预览" className="max-h-72 rounded-xl object-contain" />
                 <span className="mt-3 rounded-full border border-[#B7F1E9] bg-[#F0FDFA] px-3 py-1 text-xs font-black text-clinic-teal">
-                  图像已锁定，用于当前病例全流程诊断
+                  点击区域可重新上传图像
                 </span>
               </>
             ) : (
@@ -874,10 +851,14 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, missingItems
               className="hidden"
               type="file"
               accept="image/png,image/jpeg"
-              disabled={Boolean(imagePreview)}
               onChange={(event) => setImageFile(event.target.files?.[0] || null)}
             />
           </label>
+          {imagePreview && (
+            <button className="secondary-button mt-3 w-full justify-center py-2 text-red-500" onClick={resetImage}>
+              移除当前图像
+            </button>
+          )}
         </div>
         <div className="grid content-start gap-4">
           <div className="grid grid-cols-2 gap-4">
@@ -892,7 +873,6 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, missingItems
         </div>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-4">
-        <SelectField label="形态" value={fields.shape} onChange={(value) => updateField("shape", value)} options={["", "规则", "不规则", "分叶状"]} />
         <SelectField label="边缘" value={fields.margin} onChange={(value) => updateField("margin", value)} options={["", "清楚", "不清晰", "欠清", "模糊", "毛刺状", "毛刺"]} />
         <SelectField label="回声" value={fields.echo} onChange={(value) => updateField("echo", value)} options={["", "无回声", "低回声", "等回声", "高回声", "混合回声"]} />
         <SelectField label="纵横比>1" value={fields.aspectRatio} onChange={(value) => updateField("aspectRatio", value)} options={["", "否", "是"]} />
@@ -943,47 +923,6 @@ function StepTwo({ reportQc, onNext }) {
       </div>
       <div className="mt-6 flex justify-end">
         <button className="primary-button" onClick={onNext}>
-          生成 BI-RADS 标准映射
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function StepThree({ tags, setTags, newTag, setNewTag, addTag, canNext, onNext }) {
-  const updateTag = (id, patch) => setTags((current) => current.map((tag) => (tag.id === id ? { ...tag, ...patch } : tag)));
-  const removeTag = (id) => setTags((current) => current.filter((tag) => tag.id !== id));
-  return (
-    <div>
-      <SectionTitle icon={BadgeCheck} title="Step 3 BI-RADS 标准词映射" subtitle="将原始报告映射为标准特征标签，标签可编辑、可删除、可确认。" />
-      <div className="space-y-3">
-        {tags.map((tag) => (
-          <div key={tag.id} className="grid gap-3 rounded-2xl border border-clinic-line bg-[#F8FBFF] p-3 md:grid-cols-[1fr_auto_auto] md:items-center">
-            <input className="field" value={tag.label} onChange={(event) => updateTag(tag.id, { label: event.target.value, confirmed: false })} />
-            <button
-              className={`secondary-button py-2 ${tag.confirmed ? "border-clinic-teal text-clinic-teal" : ""}`}
-              onClick={() => updateTag(tag.id, { confirmed: !tag.confirmed })}
-            >
-              <Pencil className="h-4 w-4" />
-              {tag.confirmed ? "已确认" : "确认"}
-            </button>
-            <button className="secondary-button py-2 text-red-500" onClick={() => removeTag(tag.id)}>
-              <Trash2 className="h-4 w-4" />
-              删除
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
-        <input className="field" placeholder="新增标准标签，例如：皮肤受侵、导管扩张" value={newTag} onChange={(event) => setNewTag(event.target.value)} />
-        <button className="secondary-button" onClick={addTag}>
-          <Plus className="h-4 w-4" />
-          添加标签
-        </button>
-      </div>
-      <div className="mt-6 flex justify-end">
-        <button className="primary-button disabled:cursor-not-allowed disabled:opacity-50" onClick={onNext} disabled={!canNext}>
           进入多模态诊断
           <ArrowRight className="h-4 w-4" />
         </button>
@@ -1010,11 +949,11 @@ function StepFour({
     { metric: "图像质量", value: imageQc.score },
     { metric: "报告完整性", value: reportQc.score },
     { metric: "诊断可信度", value: confidence },
-    { metric: "标准映射", value: Math.min(100, tags.filter((tag) => tag.confirmed).length * 15 + 55) }
+    { metric: "证据标签", value: Math.min(100, tags.filter((tag) => tag.confirmed).length * 15 + 55) }
   ];
   return (
     <div>
-      <SectionTitle icon={BrainCircuit} title="Step 4 多模态智能诊断" subtitle="采用结构化证据列表输出，避免长篇自由医学推理。" />
+      <SectionTitle icon={BrainCircuit} title="Step 3 多模态智能诊断" subtitle="采用结构化证据列表输出，避免长篇自由医学推理。" />
       <div className="mb-5 rounded-2xl border border-[#CDE8F7] bg-[#F8FBFF] p-5">
         <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
@@ -1082,7 +1021,7 @@ function StepFour({
 function StepFive({ reportText, copyReport, copyState, exportWord, exportPdf }) {
   return (
     <div>
-      <SectionTitle icon={FileText} title="Step 5 标准化报告导出" subtitle="生成 AI 辅助筛查报告，支持复制、PDF 打印和 Word 导出。" />
+      <SectionTitle icon={FileText} title="Step 4 标准化报告导出" subtitle="生成 AI 辅助筛查报告，支持复制、PDF 打印和 Word 导出。" />
       <div className="rounded-2xl border border-clinic-line bg-[#F8FBFF] p-5">
         <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm leading-7 text-slate-800 shadow-inner">
           {reportText}
