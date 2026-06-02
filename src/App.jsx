@@ -488,7 +488,7 @@ function LandingPage({ setPage }) {
     ["质控闭环", "覆盖图像质量、报告完整性、结构化证据和诊断可信度评分。", ShieldCheck],
     ["报告生成", "生成面向医生复核的 AI 辅助筛查报告，支持复制和导出。", FileText]
   ];
-  const route = ["乳腺超声图像", "BioMedCLIP 蒸馏", "Qwen2.5-VL", "LoRA", "Checklist Prompt", "Label-only Output"];
+  const route = ["病例图像与结构化报告", "Cloudflare 安全代理", "Qwen2.5-VL + LoRA", "Label-only 报告输出"];
   return (
     <main>
       <section className="mx-auto max-w-[1500px] px-5 py-8">
@@ -521,7 +521,7 @@ function LandingPage({ setPage }) {
               <div className="grid grid-cols-2 gap-4">
                 <MetricBlock label="BI-RADS Macro-F1" value="0.6456" tone="blue" />
                 <MetricBlock label="Cancer F1" value="0.9825" tone="teal" />
-                <MetricBlock label="诊断流程" value="5 阶段" tone="teal" />
+                <MetricBlock label="诊断流程" value="4 阶段" tone="teal" />
                 <MetricBlock label="输出策略" value="Label-only" tone="blue" />
               </div>
               <div className="mt-5 rounded-2xl bg-white p-4">
@@ -1113,7 +1113,12 @@ function EvidencePanel({ diagnosis, tags }) {
 }
 
 function ArchitecturePage() {
-  const flow = ["React 前端", "Cloudflare Pages Function", "Qwen API 或自部署 GPU 服务", "Qwen2.5-VL + LoRA", "Checklist Prompt", "Label-only Output"];
+  const flow = [
+    "病例图像 + 结构化报告",
+    "Cloudflare Pages Function",
+    "Qwen2.5-VL + LoRA 推理",
+    "Label-only 诊断与报告输出"
+  ];
   const ablation = [
     { setting: "Qwen2.5-VL baseline", birads: 0.5812, cancer: 0.9534 },
     { setting: "+ LoRA", birads: 0.6128, cancer: 0.9716 },
@@ -1131,13 +1136,13 @@ function ArchitecturePage() {
         <p className="mt-4 max-w-4xl leading-8 text-slate-600">
           系统采用“前端工作流 + Cloudflare 安全代理 + 真实多模态模型服务”的部署路线。
           模型可以使用第三方 Qwen2.5-VL API，也可以调用你自己微调并部署在 GPU 服务器上的 Qwen2.5-VL + LoRA 服务。
-          前端不保存 API Key，通过 Checklist Prompt 约束输出为标签级诊断结果，降低自由文本医学幻觉风险。
+          前端不保存 API Key，通过 Checklist Prompt 约束输出为标签级诊断结果；当前展示流程统一为四阶段，降低自由文本医学幻觉风险。
         </p>
       </div>
 
       <div className="mt-6 clinical-card p-6">
         <h2 className="text-xl font-black text-clinic-navy">模型流程</h2>
-        <div className="mt-5 grid gap-3 lg:grid-cols-6">
+        <div className="mt-5 grid gap-3 lg:grid-cols-4">
           {flow.map((item, index) => (
             <div key={item} className="relative rounded-2xl border border-clinic-line bg-[#F8FBFF] p-4">
               <span className="grid h-9 w-9 place-items-center rounded-full bg-clinic-blue text-sm font-black text-white">{index + 1}</span>
