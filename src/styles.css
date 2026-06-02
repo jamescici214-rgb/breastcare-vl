@@ -24,8 +24,8 @@ textarea {
 .school-logo-panel {
   position: relative;
   background:
-    radial-gradient(circle at 18% 20%, rgba(30, 136, 229, 0.12), transparent 28%),
-    radial-gradient(circle at 82% 22%, rgba(0, 175, 165, 0.1), transparent 30%),
+    radial-gradient(circle at 18% 20%, rgba(0, 175, 165, 0.12), transparent 28%),
+    radial-gradient(circle at 82% 22%, rgba(30, 136, 229, 0.1), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.94));
 }
 
@@ -41,87 +41,43 @@ textarea {
   pointer-events: none;
 }
 
-.school-logo-orbit {
-  position: absolute;
-  width: min(75vw, 460px);
-  height: min(75vw, 460px);
-  border: 1px solid rgba(30, 136, 229, 0.18);
-  border-radius: 999px;
-  background:
-    conic-gradient(from 120deg, transparent 0deg, rgba(30, 136, 229, 0.32) 38deg, transparent 84deg, rgba(0, 175, 165, 0.22) 130deg, transparent 210deg);
-  animation: school-orbit 14s linear infinite;
+.sues-logo-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: min(100%, 460px);
+  align-items: center;
+  gap: 18px;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: linear-gradient(135deg, #26d7b4 0%, #00afa5 46%, #1e88e5 100%);
+  box-shadow: 0 22px 45px rgba(0, 175, 165, 0.18);
+  padding: 20px 24px;
 }
 
-.school-logo-orbit::after {
+.sues-logo-card::after {
   content: "";
   position: absolute;
-  inset: 18px;
-  border: 1px dashed rgba(0, 175, 165, 0.22);
-  border-radius: inherit;
-}
-
-.school-logo-glow {
-  position: absolute;
-  width: min(58vw, 330px);
-  height: min(58vw, 330px);
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(234, 246, 255, 0.95), rgba(234, 246, 255, 0.24) 55%, transparent 72%);
-  animation: school-pulse 4.8s ease-in-out infinite;
-}
-
-.school-rotor {
-  animation: school-rotor-spin 12s linear infinite;
-}
-
-.school-symbol {
-  animation: school-symbol-float 5.5s ease-in-out infinite;
+  inset: -40% auto -40% -35%;
+  z-index: -1;
+  width: 38%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  animation: sues-sheen 5.8s ease-in-out infinite;
 }
 
 .school-scan-line {
   position: absolute;
-  z-index: 20;
-  left: 12%;
-  top: 12%;
-  width: 76%;
+  z-index: 1;
+  left: 6%;
+  top: 0;
+  width: 88%;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(30, 136, 229, 0.68), rgba(0, 175, 165, 0.76), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 175, 165, 0.6), rgba(30, 136, 229, 0.58), transparent);
   filter: blur(0.5px);
-  animation: school-scan 4.2s ease-in-out infinite;
-}
-
-@keyframes school-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes school-pulse {
-  0%,
-  100% {
-    opacity: 0.62;
-    transform: scale(0.96);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-@keyframes school-rotor-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes school-symbol-float {
-  0%,
-  100% {
-    transform: translate(288px, 45px);
-  }
-  50% {
-    transform: translate(288px, 39px);
-  }
+  animation: school-scan 5.2s ease-in-out infinite;
 }
 
 @keyframes school-scan {
@@ -135,16 +91,24 @@ textarea {
   }
   72% {
     opacity: 0.85;
-    transform: translateY(170px);
+    transform: translateY(210px);
+  }
+}
+
+@keyframes sues-sheen {
+  0%,
+  58%,
+  100% {
+    transform: translateX(0) rotate(18deg);
+  }
+  78% {
+    transform: translateX(430%) rotate(18deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .school-logo-orbit,
-  .school-logo-glow,
-  .school-rotor,
-  .school-symbol,
-  .school-scan-line {
+  .school-scan-line,
+  .sues-logo-card::after {
     animation: none;
   }
 }

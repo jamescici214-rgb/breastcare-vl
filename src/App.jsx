@@ -562,64 +562,34 @@ function LandingPage({ setPage }) {
 function SchoolLogoShowcase() {
   return (
     <section className="clinical-card school-logo-panel mt-6 overflow-hidden p-6 lg:p-8">
-      <div className="grid gap-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
-        <div className="relative flex min-h-72 items-center justify-center">
-          <div className="school-logo-orbit" />
-          <div className="school-logo-glow" />
-          <svg className="relative z-10 h-64 w-full max-w-[520px]" viewBox="0 0 520 260" role="img" aria-label="学校动态标识">
-            <defs>
-              <linearGradient id="logoBlue" x1="0%" x2="100%" y1="0%" y2="100%">
-                <stop offset="0%" stopColor="#1E88E5" />
-                <stop offset="100%" stopColor="#00AFA5" />
-              </linearGradient>
-              <linearGradient id="logoSilver" x1="0%" x2="100%" y1="0%" y2="100%">
-                <stop offset="0%" stopColor="#C7D7E6" />
-                <stop offset="100%" stopColor="#F8FBFF" />
-              </linearGradient>
-              <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <g className="school-turbine" filter="url(#softGlow)">
-              <line x1="122" y1="122" x2="122" y2="232" stroke="url(#logoSilver)" strokeWidth="9" strokeLinecap="round" />
-              <circle cx="122" cy="122" r="13" fill="#F8FBFF" stroke="#AFC7DB" strokeWidth="3" />
-              <g className="school-rotor" style={{ transformOrigin: "122px 122px" }}>
-                <path d="M122 121 L142 24 L133 20 Z" fill="url(#logoSilver)" />
-                <path d="M121 123 L36 167 L31 157 Z" fill="url(#logoSilver)" />
-                <path d="M124 125 L197 181 L187 188 Z" fill="url(#logoSilver)" />
-              </g>
-            </g>
-
-            <g className="school-symbol" transform="translate(288 45)">
-              <path d="M0 0 H116 V28 H0 Z" fill="#D7E7F3" />
-              <path d="M0 36 L116 100 V126 L0 64 Z" fill="#AFC7DB" />
-              <path d="M0 138 H116 V166 H0 Z" fill="url(#logoBlue)" opacity=".96" />
-              <path d="M0 178 L116 218 V246 L0 206 Z" fill="#AFC7DB" />
-              <path d="M140 0 H176 V94 H140 Z" fill="#F8FBFF" />
-              <path d="M202 0 H236 V94 H202 Z" fill="#B8CAD9" />
-              <path d="M140 122 H236 V150 H140 Z" fill="#D8E7F3" />
-              <path d="M140 166 L236 228 V250 L140 188 Z" fill="#F8FBFF" />
-            </g>
+      <span className="school-scan-line" />
+      <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
+        <div className="sues-logo-card" aria-label="上海工程技术大学 Shanghai University of Engineering Science">
+          <svg className="h-14 w-14 shrink-0 text-white" viewBox="0 0 96 96" role="img" aria-hidden="true">
+            <path d="M12 12h17v64H12z" fill="currentColor" opacity=".98" />
+            <path d="M34 12h17v16H34zM34 36h17v16H34zM34 60h17v16H34z" fill="currentColor" opacity=".9" />
+            <path d="M56 12h28v16H56zM56 36h28v16H56zM56 60h28v16H56z" fill="currentColor" opacity=".98" />
+            <path d="M12 12l39 40v24L12 36zM34 12l50 52v24L34 36z" fill="currentColor" opacity=".72" />
           </svg>
-          <span className="school-scan-line" />
+          <div className="leading-none">
+            <p className="text-xl font-black tracking-wide text-white md:text-2xl">上海工程技术大学</p>
+            <p className="mt-2 max-w-[360px] text-xs font-black uppercase leading-4 tracking-wide text-white/95 md:text-sm">
+              Shanghai University of Engineering Science
+            </p>
+          </div>
         </div>
 
-        <div>
+        <div className="max-w-3xl">
           <div className="pill bg-white/80">
             <Sparkles className="h-4 w-4 text-clinic-teal" />
             University Medical AI Showcase
           </div>
-          <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">校方标识 · 医疗 AI 联合创新展示</h2>
-          <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
-            以简约动态校标承载项目来源，结合柔和扫描光效和医学蓝绿色能量环，保持路演页面专业、可信、克制。
+          <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">上海工程技术大学 · BreastCare-VL</h2>
+          <p className="mt-4 text-base leading-8 text-slate-600">
+            医疗 AI 创新展示项目，聚焦基层乳腺超声筛查、多模态诊断、BI-RADS 标准化和报告质控闭环。
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            {["基层筛查", "乳腺超声", "多模态模型", "临床质控"].map((item) => (
+            {["乳腺超声", "Qwen2.5-VL + LoRA", "结构化证据", "报告导出"].map((item) => (
               <span key={item} className="pill bg-[#F8FBFF]">
                 {item}
               </span>
