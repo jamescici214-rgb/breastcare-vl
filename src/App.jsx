@@ -582,7 +582,7 @@ function SchoolLogoShowcase() {
         <div className="max-w-3xl">
           <div className="pill bg-white/80">
             <Sparkles className="h-4 w-4 text-clinic-teal" />
-            University Medical AI Showcase
+            Shanghai University of Engineering Science
           </div>
           <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">上海工程技术大学 · BreastCare-VL</h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
@@ -679,13 +679,7 @@ function DiagnosisWorkspace() {
   const ruleDiagnosis = useMemo(() => ({ ...predictDiagnosis(fields), source: "规则推理兜底" }), [fields]);
   const diagnosis = modelDiagnosis || ruleDiagnosis;
   const modelAttempted = modelStatus === "success" || modelStatus === "error";
-  const maxAllowedStep = useMemo(() => {
-    let step = 0;
-    if (stepOneMissing.length === 0) step = 1;
-    if (step >= 1 && reportQc.missing.length === 0) step = 2;
-    if (step >= 2 && modelAttempted) step = 3;
-    return Math.min(step, workflowGate);
-  }, [modelAttempted, reportQc.missing.length, stepOneMissing.length, workflowGate]);
+  const maxAllowedStep = workflowGate;
   const confidence = useMemo(() => {
     const ruleStability = 78 + Math.min(diagnosis.suspiciousScore, 5) * 3;
     return Math.round(clamp(0.34 * imageQc.score + 0.36 * reportQc.score + 0.3 * ruleStability) * 10) / 10;
@@ -867,7 +861,6 @@ function DiagnosisWorkspace() {
 }
 
 function StepOne({ fields, updateField, imagePreview, setImageFile, resetImage, missingItems, onNext }) {
-  const canNext = missingItems.length === 0;
   return (
     <div>
       <SectionTitle icon={ImagePlus} title="Step 1 病例数据录入" subtitle="上传乳腺超声图像，录入与训练集一致的结构化超声字段。" />
@@ -925,13 +918,13 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, resetImage, 
         <SelectField label="淋巴结" value={fields.lymphNode} onChange={(value) => updateField("lymphNode", value)} options={["", "无肿大", "正常", "异常", "未描述"]} />
         <SelectField label="后方回声" value={fields.posteriorEcho} onChange={(value) => updateField("posteriorEcho", value)} options={["", "无改变", "无明显改变", "增强", "衰减", "声影"]} />
       </div>
-      {!canNext && (
+      {missingItems.length > 0 && (
         <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-700">
-          请先补全：{missingItems.join("、")}
+          当前缺失：{missingItems.join("、")}。可继续进入特征补全，系统将在下一阶段给出完整性提醒。
         </div>
       )}
       <div className="mt-6 flex justify-end">
-        <button className="primary-button disabled:cursor-not-allowed disabled:opacity-50" onClick={onNext} disabled={!canNext}>
+        <button className="primary-button" onClick={onNext}>
           进入特征补全
           <ArrowRight className="h-4 w-4" />
         </button>
