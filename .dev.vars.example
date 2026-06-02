@@ -1,9 +1,17 @@
-QWEN_API_KEY="sk-your-qwen-or-openrouter-api-key"
-QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-QWEN_MODEL="qwen2.5-vl-72b-instruct"
+# 方式 A：第三方 OpenAI-compatible Qwen API
+# QWEN_API_KEY="sk-your-qwen-api-key"
+# QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+# QWEN_MODEL="qwen2.5-vl-72b-instruct"
 
-# 可选：如果你有自己微调并部署的 Qwen2.5-VL 服务，使用下面这一组。
-# QWEN_BACKEND_MODE="self-hosted"
+# 方式 B：自部署 Qwen2.5-VL 服务
+QWEN_BACKEND_MODE="self-hosted"
+
+# 本地 Cloudflare Pages Function 联调时使用：
+QWEN_SELF_HOSTED_URL="http://127.0.0.1:8000/v1/breastcare/diagnose"
+QWEN_SELF_HOSTED_MODEL="qwen2.5-vl-7b-lora-epoch-5"
+
+# 线上 Cloudflare Pages 不能访问 127.0.0.1。
+# 线上部署时请改成 Cloudflare Tunnel / GPU 服务器 / ModelScope 提供的公网 HTTPS API：
 # QWEN_SELF_HOSTED_URL="https://your-gpu-api.example.com/v1/breastcare/diagnose"
 # QWEN_SELF_HOSTED_API_KEY="your-private-backend-token"
 # QWEN_SELF_HOSTED_MODEL="breastcare-qwen2.5-vl-lora"

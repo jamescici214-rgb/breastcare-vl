@@ -117,6 +117,9 @@ const DEFAULT_FIELDS = {
 };
 
 const REQUIRED_FEATURES = [
+  ["age", "年龄"],
+  ["location", "位置"],
+  ["size", "大小"],
   ["shape", "形态"],
   ["margin", "边缘"],
   ["echo", "回声"],
@@ -125,6 +128,20 @@ const REQUIRED_FEATURES = [
   ["bloodFlow", "血流"],
   ["lymphNode", "淋巴结"],
   ["posteriorEcho", "后方回声"]
+];
+
+const STEP_ONE_REQUIRED = [
+  ["age", "年龄"],
+  ["location", "病灶位置"],
+  ["size", "病灶大小"],
+  ["shape", "形态"],
+  ["margin", "边缘"],
+  ["echo", "回声"],
+  ["aspectRatio", "纵横比"],
+  ["calcification", "钙化"],
+  ["posteriorEcho", "后方回声"],
+  ["bloodFlow", "血流"],
+  ["lymphNode", "淋巴结"]
 ];
 
 const RISK_COLORS = {
@@ -149,21 +166,51 @@ function isMissing(value) {
   return value === undefined || value === null || String(value).trim() === "";
 }
 
+function normalizeExcelValue(value, emptyText = "未填写") {
+  if (isMissing(value)) return emptyText;
+  const text = String(value).trim();
+  if (text === "否") return "无";
+  if (text === "正常") return "无肿大";
+  if (text === "欠清" || text === "模糊") return "不清晰";
+  if (text === "毛刺") return "毛刺状";
+  if (text === "无明显改变") return "无改变";
+  if (text === "点状强回声") return "点状钙化";
+  return text;
+}
+
+function buildExcelStyleStructuredReport(fields) {
+  const rows = [
+    ["年龄", fields.age ? `${fields.age}岁` : ""],
+    ["位置", fields.location],
+    ["回声", fields.echo],
+    ["大小", fields.size],
+    ["纵横比大于1", normalizeExcelValue(fields.aspectRatio)],
+    ["边缘", normalizeExcelValue(fields.margin)],
+    ["后方回声", normalizeExcelValue(fields.posteriorEcho)],
+    ["钙化", normalizeExcelValue(fields.calcification)],
+    ["血流", normalizeExcelValue(fields.bloodFlow)],
+    ["导管改变", normalizeExcelValue(fields.ductChange || "无")],
+    ["淋巴结", normalizeExcelValue(fields.lymphNode)]
+  ];
+
+  return rows.map(([label, value]) => `${label}：${normalizeExcelValue(value)}`).join("\n");
+}
+
 function getReportText(fields) {
-  return `${fields.structuredReport || ""}\n${fields.rawDescription || ""}`.trim();
+  return buildExcelStyleStructuredReport(fields);
 }
 
 function analyzeReportCompleteness(fields) {
   const text = getReportText(fields);
   const keywordMap = {
     shape: ["形态", "规则", "不规则", "分叶"],
-    margin: ["边缘", "边界", "欠清", "模糊", "毛刺", "清楚"],
+    margin: ["边缘", "边界", "欠清", "模糊", "毛刺", "清楚", "不清晰", "毛刺状"],
     echo: ["回声", "低回声", "混合回声", "等回声", "高回声", "无回声"],
-    aspectRatio: ["纵横比", "大于1", "小于1", "大于 1"],
-    calcification: ["钙化", "强回声", "微钙化"],
+    aspectRatio: ["纵横比", "大于1", "小于1", "大于 1", "无"],
+    calcification: ["钙化", "强回声", "微钙化", "点状钙化"],
     bloodFlow: ["血流", "CDFI", "彩色多普勒"],
-    lymphNode: ["淋巴结", "腋窝"],
-    posteriorEcho: ["后方", "增强", "衰减", "声影"]
+    lymphNode: ["淋巴结", "腋窝", "无肿大"],
+    posteriorEcho: ["后方", "增强", "衰减", "声影", "无改变"]
   };
 
   const missing = REQUIRED_FEATURES.filter(([key]) => {
@@ -192,13 +239,13 @@ function detectStandardTags(fields) {
   };
 
   if (fields.echo) add(fields.echo);
-  if (fields.margin && fields.margin !== "清楚") add(fields.margin === "欠清" ? "边界欠清" : `边缘${fields.margin}`);
-  if (fields.aspectRatio === "是" || text.includes("纵横比大于1")) add("纵横比>1");
-  if (["点状强回声", "微钙化"].includes(fields.calcification)) add(fields.calcification === "微钙化" ? "微钙化" : "点状强回声");
-  if (fields.bloodFlow === "丰富" || text.includes("血流丰富")) add("血流丰富");
+  if (fields.margin && !["清楚", "无"].includes(fields.margin)) add(["欠清", "模糊", "不清晰"].includes(fields.margin) ? "边界不清晰" : `边缘${normalizeExcelValue(fields.margin)}`);
+  if (fields.aspectRatio === "是") add("纵横比>1");
+  if (["点状强回声", "微钙化", "点状钙化"].includes(fields.calcification)) add(normalizeExcelValue(fields.calcification));
+  if (fields.bloodFlow && fields.bloodFlow !== "无") add(`血流${fields.bloodFlow}`);
   if (fields.shape === "不规则" || text.includes("形态不规则")) add("形态不规则");
-  if (fields.posteriorEcho === "声影" || text.includes("声影")) add("后方声影");
-  if (fields.lymphNode === "异常" || text.includes("淋巴结异常")) add("腋窝淋巴结异常");
+  if (["声影", "衰减"].includes(fields.posteriorEcho) || text.includes("声影")) add(`后方回声${normalizeExcelValue(fields.posteriorEcho)}`);
+  if (["异常", "肿大"].includes(fields.lymphNode) || text.includes("淋巴结异常")) add("腋窝淋巴结异常");
 
   if (tags.length === 0) add("未见明确可疑恶性征象", "规则兜底");
   return tags;
@@ -211,10 +258,10 @@ function predictDiagnosis(fields) {
   };
 
   add(fields.shape === "不规则", "形态不规则", "形态", "结构化征象");
-  add(["欠清", "模糊", "毛刺"].includes(fields.margin), `边缘${fields.margin}`, "边缘", "结构化征象");
+  add(["欠清", "模糊", "毛刺", "不清晰", "毛刺状"].includes(fields.margin), `边缘${normalizeExcelValue(fields.margin)}`, "边缘", "结构化征象");
   add(fields.aspectRatio === "是", "纵横比>1", "生长方向", "结构化征象");
-  add(["点状强回声", "微钙化"].includes(fields.calcification), fields.calcification, "钙化", "结构化征象");
-  add(fields.posteriorEcho === "声影", "后方声影", "后方回声", "结构化征象");
+  add(["点状强回声", "微钙化", "点状钙化"].includes(fields.calcification), normalizeExcelValue(fields.calcification), "钙化", "结构化征象");
+  add(["声影", "衰减"].includes(fields.posteriorEcho), `后方回声${normalizeExcelValue(fields.posteriorEcho)}`, "后方回声", "结构化征象");
   add(fields.bloodFlow === "丰富", "血流丰富", "血流", "结构化征象");
   add(fields.lymphNode === "异常", "腋窝淋巴结异常", "淋巴结", "结构化征象");
 
@@ -533,23 +580,31 @@ function MetricBlock({ label, value, tone }) {
   );
 }
 
-function Stepper({ activeStep, setActiveStep }) {
+function Stepper({ activeStep, setActiveStep, maxAllowedStep }) {
   return (
     <div className="clinical-card p-4">
       <div className="grid gap-3 md:grid-cols-5">
         {FLOW_STEPS.map((step, index) => {
           const active = activeStep === index;
+          const locked = index > maxAllowedStep;
           return (
             <button
               key={step}
-              onClick={() => setActiveStep(index)}
+              onClick={() => {
+                if (!locked) setActiveStep(index);
+              }}
+              disabled={locked}
               className={`rounded-2xl border px-4 py-3 text-left transition ${
-                active ? "border-clinic-blue bg-[#EAF6FF] shadow-sm" : "border-clinic-line bg-white hover:border-clinic-blue"
+                locked
+                  ? "cursor-not-allowed border-clinic-line bg-slate-50 opacity-60"
+                  : active
+                    ? "border-clinic-blue bg-[#EAF6FF] shadow-sm"
+                    : "border-clinic-line bg-white hover:border-clinic-blue"
               }`}
             >
               <span
                 className={`grid h-8 w-8 place-items-center rounded-full text-sm font-black ${
-                  active ? "bg-clinic-blue text-white" : "bg-[#F1F7FC] text-slate-600"
+                  locked ? "bg-slate-200 text-slate-500" : active ? "bg-clinic-blue text-white" : "bg-[#F1F7FC] text-slate-600"
                 }`}
               >
                 {index + 1}
@@ -565,6 +620,7 @@ function Stepper({ activeStep, setActiveStep }) {
 
 function DiagnosisWorkspace() {
   const [activeStep, setActiveStep] = useState(0);
+  const [workflowGate, setWorkflowGate] = useState(0);
   const [fields, setFields] = useState(DEFAULT_FIELDS);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -584,9 +640,24 @@ function DiagnosisWorkspace() {
   const [modelStatus, setModelStatus] = useState("idle");
   const [modelError, setModelError] = useState("");
 
+  const stepOneMissing = useMemo(() => {
+    const missing = STEP_ONE_REQUIRED.filter(([key]) => isMissing(fields[key])).map(([, label]) => label);
+    if (!imagePreview) missing.unshift("乳腺超声图像");
+    return missing;
+  }, [fields, imagePreview]);
   const reportQc = useMemo(() => analyzeReportCompleteness(fields), [fields]);
   const ruleDiagnosis = useMemo(() => ({ ...predictDiagnosis(fields), source: "规则推理兜底" }), [fields]);
   const diagnosis = modelDiagnosis || ruleDiagnosis;
+  const tagsComplete = tags.length > 0 && tags.every((tag) => !isMissing(tag.label) && tag.confirmed);
+  const modelAttempted = modelStatus === "success" || modelStatus === "error";
+  const maxAllowedStep = useMemo(() => {
+    let step = 0;
+    if (stepOneMissing.length === 0) step = 1;
+    if (step >= 1 && reportQc.missing.length === 0) step = 2;
+    if (step >= 2 && tagsComplete) step = 3;
+    if (step >= 3 && modelAttempted) step = 4;
+    return Math.min(step, workflowGate);
+  }, [modelAttempted, reportQc.missing.length, stepOneMissing.length, tagsComplete, workflowGate]);
   const confidence = useMemo(() => {
     const ruleStability = 78 + Math.min(diagnosis.suspiciousScore, 5) * 3;
     return Math.round(clamp(0.34 * imageQc.score + 0.36 * reportQc.score + 0.3 * ruleStability) * 10) / 10;
@@ -605,19 +676,26 @@ function DiagnosisWorkspace() {
     return () => URL.revokeObjectURL(url);
   }, [imageFile]);
 
+  useEffect(() => {
+    if (activeStep > maxAllowedStep) setActiveStep(maxAllowedStep);
+  }, [activeStep, maxAllowedStep]);
+
   const updateField = (key, value) => {
     setModelDiagnosis(null);
+    setWorkflowGate(0);
     setFields((current) => ({ ...current, [key]: value }));
   };
   const loadSample = (key) => {
     const next = SAMPLE_CASES[key].fields;
     setModelDiagnosis(null);
+    setWorkflowGate(0);
     setFields(next);
     setTags(detectStandardTags(next));
-    setActiveStep(1);
+    setActiveStep(0);
   };
   const remapTags = () => {
     setTags(detectStandardTags(fields));
+    setWorkflowGate((current) => Math.max(current, 2));
     setActiveStep(2);
   };
   const addTag = () => {
@@ -700,7 +778,7 @@ function DiagnosisWorkspace() {
         </div>
       </div>
 
-      <Stepper activeStep={activeStep} setActiveStep={setActiveStep} />
+      <Stepper activeStep={activeStep} setActiveStep={setActiveStep} maxAllowedStep={maxAllowedStep} />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[.92fr_1.08fr]">
         <section className="clinical-card p-5">
@@ -710,7 +788,11 @@ function DiagnosisWorkspace() {
               updateField={updateField}
               imagePreview={imagePreview}
               setImageFile={setImageFile}
-              onNext={() => setActiveStep(1)}
+              missingItems={stepOneMissing}
+              onNext={() => {
+                setWorkflowGate((current) => Math.max(current, 1));
+                setActiveStep(1);
+              }}
             />
           )}
           {activeStep === 1 && <StepTwo reportQc={reportQc} onNext={remapTags} />}
@@ -721,7 +803,11 @@ function DiagnosisWorkspace() {
               newTag={newTag}
               setNewTag={setNewTag}
               addTag={addTag}
-              onNext={() => setActiveStep(3)}
+              canNext={tagsComplete}
+              onNext={() => {
+                setWorkflowGate((current) => Math.max(current, 3));
+                setActiveStep(3);
+              }}
             />
           )}
           {activeStep === 3 && (
@@ -736,7 +822,11 @@ function DiagnosisWorkspace() {
               modelStatus={modelStatus}
               modelError={modelError}
               onRunModel={runRealQwenDiagnosis}
-              onNext={() => setActiveStep(4)}
+              canNext={modelAttempted}
+              onNext={() => {
+                setWorkflowGate((current) => Math.max(current, 4));
+                setActiveStep(4);
+              }}
             />
           )}
           {activeStep === 4 && (
@@ -753,16 +843,26 @@ function DiagnosisWorkspace() {
   );
 }
 
-function StepOne({ fields, updateField, imagePreview, setImageFile, onNext }) {
+function StepOne({ fields, updateField, imagePreview, setImageFile, missingItems, onNext }) {
+  const canNext = missingItems.length === 0;
   return (
     <div>
-      <SectionTitle icon={ImagePlus} title="Step 1 病例数据录入" subtitle="上传乳腺超声图像，录入结构化报告和原始描述。" />
+      <SectionTitle icon={ImagePlus} title="Step 1 病例数据录入" subtitle="上传乳腺超声图像，录入与训练集一致的结构化超声字段。" />
       <div className="grid gap-5 lg:grid-cols-2">
         <div>
           <label className="label">乳腺超声图像上传</label>
-          <label className="flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#BFD9EC] bg-[#F8FBFF] p-5 text-center transition hover:border-clinic-blue">
+          <label
+            className={`flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-[#BFD9EC] bg-[#F8FBFF] p-5 text-center transition ${
+              imagePreview ? "cursor-not-allowed" : "cursor-pointer hover:border-clinic-blue"
+            }`}
+          >
             {imagePreview ? (
-              <img src={imagePreview} alt="乳腺超声预览" className="max-h-72 rounded-xl object-contain" />
+              <>
+                <img src={imagePreview} alt="乳腺超声预览" className="max-h-72 rounded-xl object-contain" />
+                <span className="mt-3 rounded-full border border-[#B7F1E9] bg-[#F0FDFA] px-3 py-1 text-xs font-black text-clinic-teal">
+                  图像已锁定，用于当前病例全流程诊断
+                </span>
+              </>
             ) : (
               <>
                 <ImagePlus className="h-12 w-12 text-clinic-blue" />
@@ -770,7 +870,13 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, onNext }) {
                 <span className="mt-1 text-xs text-slate-500">用于图像质量控制与多模态诊断输入</span>
               </>
             )}
-            <input className="hidden" type="file" accept="image/png,image/jpeg" onChange={(event) => setImageFile(event.target.files?.[0] || null)} />
+            <input
+              className="hidden"
+              type="file"
+              accept="image/png,image/jpeg"
+              disabled={Boolean(imagePreview)}
+              onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+            />
           </label>
         </div>
         <div className="grid content-start gap-4">
@@ -779,22 +885,29 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, onNext }) {
             <TextField label="病灶大小" value={fields.size} onChange={(value) => updateField("size", value)} />
           </div>
           <TextField label="病灶位置" value={fields.location} onChange={(value) => updateField("location", value)} />
-          <TextArea label="结构化报告" value={fields.structuredReport} onChange={(value) => updateField("structuredReport", value)} rows={4} />
-          <TextArea label="原始描述" value={fields.rawDescription} onChange={(value) => updateField("rawDescription", value)} rows={4} />
+          <label>
+            <span className="label">标准化结构化报告预览</span>
+            <textarea className="field min-h-48 resize-none bg-[#F8FBFF]" readOnly value={buildExcelStyleStructuredReport(fields)} />
+          </label>
         </div>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-4">
         <SelectField label="形态" value={fields.shape} onChange={(value) => updateField("shape", value)} options={["", "规则", "不规则", "分叶状"]} />
-        <SelectField label="边缘" value={fields.margin} onChange={(value) => updateField("margin", value)} options={["", "清楚", "欠清", "模糊", "毛刺"]} />
+        <SelectField label="边缘" value={fields.margin} onChange={(value) => updateField("margin", value)} options={["", "清楚", "不清晰", "欠清", "模糊", "毛刺状", "毛刺"]} />
         <SelectField label="回声" value={fields.echo} onChange={(value) => updateField("echo", value)} options={["", "无回声", "低回声", "等回声", "高回声", "混合回声"]} />
         <SelectField label="纵横比>1" value={fields.aspectRatio} onChange={(value) => updateField("aspectRatio", value)} options={["", "否", "是"]} />
-        <SelectField label="钙化" value={fields.calcification} onChange={(value) => updateField("calcification", value)} options={["", "无", "粗大钙化", "点状强回声", "微钙化"]} />
-        <SelectField label="血流" value={fields.bloodFlow} onChange={(value) => updateField("bloodFlow", value)} options={["", "无", "少量", "丰富"]} />
-        <SelectField label="淋巴结" value={fields.lymphNode} onChange={(value) => updateField("lymphNode", value)} options={["", "正常", "异常", "未描述"]} />
-        <SelectField label="后方回声" value={fields.posteriorEcho} onChange={(value) => updateField("posteriorEcho", value)} options={["", "无明显改变", "增强", "衰减", "声影"]} />
+        <SelectField label="钙化" value={fields.calcification} onChange={(value) => updateField("calcification", value)} options={["", "无", "点状钙化", "粗大钙化", "点状强回声", "微钙化"]} />
+        <SelectField label="血流" value={fields.bloodFlow} onChange={(value) => updateField("bloodFlow", value)} options={["", "无", "点状", "条状", "少量", "丰富"]} />
+        <SelectField label="淋巴结" value={fields.lymphNode} onChange={(value) => updateField("lymphNode", value)} options={["", "无肿大", "正常", "异常", "未描述"]} />
+        <SelectField label="后方回声" value={fields.posteriorEcho} onChange={(value) => updateField("posteriorEcho", value)} options={["", "无改变", "无明显改变", "增强", "衰减", "声影"]} />
       </div>
+      {!canNext && (
+        <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-700">
+          请先补全：{missingItems.join("、")}
+        </div>
+      )}
       <div className="mt-6 flex justify-end">
-        <button className="primary-button" onClick={onNext}>
+        <button className="primary-button disabled:cursor-not-allowed disabled:opacity-50" onClick={onNext} disabled={!canNext}>
           进入特征补全
           <ArrowRight className="h-4 w-4" />
         </button>
@@ -838,7 +951,7 @@ function StepTwo({ reportQc, onNext }) {
   );
 }
 
-function StepThree({ tags, setTags, newTag, setNewTag, addTag, onNext }) {
+function StepThree({ tags, setTags, newTag, setNewTag, addTag, canNext, onNext }) {
   const updateTag = (id, patch) => setTags((current) => current.map((tag) => (tag.id === id ? { ...tag, ...patch } : tag)));
   const removeTag = (id) => setTags((current) => current.filter((tag) => tag.id !== id));
   return (
@@ -870,7 +983,7 @@ function StepThree({ tags, setTags, newTag, setNewTag, addTag, onNext }) {
         </button>
       </div>
       <div className="mt-6 flex justify-end">
-        <button className="primary-button" onClick={onNext}>
+        <button className="primary-button disabled:cursor-not-allowed disabled:opacity-50" onClick={onNext} disabled={!canNext}>
           进入多模态诊断
           <ArrowRight className="h-4 w-4" />
         </button>
@@ -890,6 +1003,7 @@ function StepFour({
   modelStatus,
   modelError,
   onRunModel,
+  canNext,
   onNext
 }) {
   const radarData = [
@@ -956,7 +1070,7 @@ function StepFour({
         </ResponsiveContainer>
       </div>
       <div className="mt-6 flex justify-end">
-        <button className="primary-button" onClick={onNext}>
+        <button className="primary-button disabled:cursor-not-allowed disabled:opacity-50" onClick={onNext} disabled={!canNext}>
           生成标准化报告
           <ArrowRight className="h-4 w-4" />
         </button>
