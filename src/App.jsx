@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  RotateCcw,
   Workflow
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -187,24 +188,27 @@ function buildExcelStyleStructuredReport(fields) {
 }
 
 function getReportText(fields) {
-  return buildExcelStyleStructuredReport(fields);
+  return isMissing(fields.structuredReport) ? buildExcelStyleStructuredReport(fields) : fields.structuredReport;
 }
 
 function analyzeReportCompleteness(fields) {
-  const text = getReportText(fields);
-  const keywordMap = {
-    margin: ["边缘", "边界", "欠清", "模糊", "毛刺", "清楚", "不清晰", "毛刺状"],
-    echo: ["回声", "低回声", "混合回声", "等回声", "高回声", "无回声"],
-    aspectRatio: ["纵横比", "大于1", "小于1", "大于 1", "无"],
-    calcification: ["钙化", "强回声", "微钙化", "点状钙化"],
-    bloodFlow: ["血流", "CDFI", "彩色多普勒"],
-    lymphNode: ["淋巴结", "腋窝", "无肿大"],
-    posteriorEcho: ["后方", "增强", "衰减", "声影", "无改变"]
+  const text = `${fields.structuredReport || ""}\n${fields.rawDescription || ""}`;
+  const detectorMap = {
+    age: (content) => /\d{1,3}\s*岁|年龄\s*[：:]\s*\d{1,3}/.test(content),
+    location: (content) => /(左|右|双)乳|乳腺|象限|钟点位/.test(content),
+    size: (content) => /\d+(\.\d+)?\s*(mm|毫米|cm|厘米)\s*[×xX*]\s*\d+(\.\d+)?\s*(mm|毫米|cm|厘米)?/.test(content),
+    margin: (content) => /(边缘|边界).*(清楚|欠清|不清晰|模糊|毛刺)|清楚|欠清|不清晰|模糊|毛刺/.test(content),
+    echo: (content) => /(无回声|低回声|等回声|高回声|混合回声)/.test(content),
+    aspectRatio: (content) => /纵横比.*(大于\s*1|小于\s*1|>\s*1|≤\s*1)|大于\s*1|小于\s*1/.test(content),
+    calcification: (content) => /(无钙化|粗大钙化|点状钙化|点状强回声|微钙化|强回声)/.test(content),
+    bloodFlow: (content) => /(血流|CDFI|彩色多普勒).*(无|点状|条状|少量|丰富)|血流丰富|少量血流/.test(content),
+    lymphNode: (content) => /(淋巴结|腋窝).*(正常|异常|无肿大|肿大|未描述)/.test(content),
+    posteriorEcho: (content) => /(后方|后壁).*(无改变|无明显改变|增强|衰减|声影)|声影|衰减/.test(content)
   };
 
   const missing = REQUIRED_FEATURES.filter(([key]) => {
     const hasField = !isMissing(fields[key]);
-    const hasText = keywordMap[key]?.some((keyword) => text.includes(keyword));
+    const hasText = detectorMap[key]?.(text);
     return !hasField && !hasText;
   }).map(([, label]) => label);
 
@@ -320,6 +324,7 @@ function predictDiagnosis(fields) {
 
 function generateReport(fields, imageQc, reportQc, tags, diagnosis, confidence) {
   return `乳影智诊 BreastCare-VL AI 辅助筛查报告
+面向基层乳腺超声筛查的多模态智能诊断 Copilot
 
 一、病例信息
 年龄：${fields.age || "未填写"} 岁
@@ -565,15 +570,15 @@ function SchoolLogoShowcase() {
       <span className="school-scan-line" />
       <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
         <div className="sues-logo-card" aria-label="上海工程技术大学 Shanghai University of Engineering Science">
-          <svg className="h-14 w-14 shrink-0 text-white" viewBox="0 0 96 96" role="img" aria-hidden="true">
-            <path d="M12 12h17v64H12z" fill="currentColor" opacity=".98" />
-            <path d="M34 12h17v16H34zM34 36h17v16H34zM34 60h17v16H34z" fill="currentColor" opacity=".9" />
-            <path d="M56 12h28v16H56zM56 36h28v16H56zM56 60h28v16H56z" fill="currentColor" opacity=".98" />
-            <path d="M12 12l39 40v24L12 36zM34 12l50 52v24L34 36z" fill="currentColor" opacity=".72" />
+          <svg className="h-20 w-20 shrink-0 text-white" viewBox="0 0 120 120" role="img" aria-hidden="true">
+            <path d="M14 17h18v86H14z" fill="currentColor" />
+            <path d="M39 17h27v18H39zM39 44l51 34v20L39 64zM39 74l48 20v18L39 93z" fill="currentColor" opacity=".98" />
+            <path d="M73 17h17v49H73zM98 17h18v49H98zM73 75h43v18H73zM73 101h43v18H73z" fill="currentColor" />
+            <path d="M14 17l52 49v22L14 39zM73 75l43 26v18L73 93z" fill="currentColor" opacity=".72" />
           </svg>
           <div className="leading-none">
-            <p className="text-xl font-black tracking-wide text-white md:text-2xl">上海工程技术大学</p>
-            <p className="mt-2 max-w-[360px] text-xs font-black uppercase leading-4 tracking-wide text-white/95 md:text-sm">
+            <p className="text-2xl font-black tracking-wide text-white md:text-4xl">上海工程技术大学</p>
+            <p className="mt-3 max-w-[520px] text-sm font-black uppercase leading-5 tracking-wide text-white/95 md:text-xl">
               Shanghai University of Engineering Science
             </p>
           </div>
@@ -764,9 +769,25 @@ function DiagnosisWorkspace() {
     }
   };
   const copyReport = async () => {
-    await navigator.clipboard.writeText(reportText);
-    setCopyState("已复制");
-    window.setTimeout(() => setCopyState("复制报告文本"), 1300);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(reportText);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = reportText;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+      setCopyState("已复制");
+    } catch {
+      setCopyState("复制失败");
+    } finally {
+      window.setTimeout(() => setCopyState("复制报告文本"), 1300);
+    }
   };
   const exportWord = () => {
     const html = `<html><head><meta charset="utf-8"></head><body><pre style="font-family:Microsoft YaHei,Arial;white-space:pre-wrap;line-height:1.75">${reportText}</pre></body></html>`;
@@ -780,6 +801,7 @@ function DiagnosisWorkspace() {
   };
   const exportPdf = () => {
     const win = window.open("", "_blank", "width=900,height=1100");
+    if (!win) return;
     win.document.write(`<html><head><title>AI 辅助筛查报告</title><meta charset="utf-8"></head><body><pre style="font-family:Microsoft YaHei,Arial;white-space:pre-wrap;line-height:1.75;font-size:14px">${reportText}</pre></body></html>`);
     win.document.close();
     win.focus();
@@ -847,7 +869,21 @@ function DiagnosisWorkspace() {
             />
           )}
           {activeStep === 3 && (
-            <StepFive reportText={reportText} copyReport={copyReport} copyState={copyState} exportWord={exportWord} exportPdf={exportPdf} />
+            <StepFive
+              reportText={reportText}
+              imagePreview={imagePreview}
+              diagnosis={diagnosis}
+              tags={tags}
+              copyReport={copyReport}
+              copyState={copyState}
+              exportWord={exportWord}
+              exportPdf={exportPdf}
+              onBack={() => setActiveStep(2)}
+              onRestart={() => {
+                setWorkflowGate(0);
+                setActiveStep(0);
+              }}
+            />
           )}
         </section>
 
@@ -899,13 +935,26 @@ function StepOne({ fields, updateField, imagePreview, setImageFile, resetImage, 
         </div>
         <div className="grid content-start gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="年龄" value={fields.age} onChange={(value) => updateField("age", value)} type="number" />
+            <TextField
+              label="年龄"
+              value={fields.age}
+              onChange={(value) => updateField("age", value.replace(/\D/g, "").slice(0, 3))}
+              inputMode="numeric"
+              maxLength={3}
+              placeholder="如 45"
+            />
             <TextField label="病灶大小" value={fields.size} onChange={(value) => updateField("size", value)} />
           </div>
           <TextField label="病灶位置" value={fields.location} onChange={(value) => updateField("location", value)} />
           <label>
-            <span className="label">标准化结构化报告预览</span>
-            <textarea className="field min-h-48 resize-none bg-[#F8FBFF]" readOnly value={buildExcelStyleStructuredReport(fields)} />
+            <span className="label">自定义结构化报告</span>
+            <textarea
+              className="field min-h-48 resize-y bg-white"
+              value={fields.structuredReport}
+              placeholder={buildExcelStyleStructuredReport(fields)}
+              onChange={(event) => updateField("structuredReport", event.target.value)}
+            />
+            <span className="mt-1 block text-xs font-semibold text-slate-500">可直接粘贴或手写结构化描述；留空时系统会按下方字段自动生成。</span>
           </label>
         </div>
       </div>
@@ -1055,14 +1104,44 @@ function StepFour({
   );
 }
 
-function StepFive({ reportText, copyReport, copyState, exportWord, exportPdf }) {
+function StepFive({ reportText, imagePreview, diagnosis, tags, copyReport, copyState, exportWord, exportPdf, onBack, onRestart }) {
   return (
     <div>
       <SectionTitle icon={FileText} title="Step 4 标准化报告导出" subtitle="生成 AI 辅助筛查报告，支持复制、PDF 打印和 Word 导出。" />
-      <div className="rounded-2xl border border-clinic-line bg-[#F8FBFF] p-5">
-        <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm leading-7 text-slate-800 shadow-inner">
-          {reportText}
-        </pre>
+      <div className="grid gap-5 xl:grid-cols-[1.08fr_.92fr]">
+        <div className="rounded-2xl border border-clinic-line bg-[#F8FBFF] p-5">
+          <FormattedReport reportText={reportText} />
+        </div>
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-clinic-line bg-white p-5 shadow-soft">
+            <div className="flex items-center gap-2">
+              <ImagePlus className="h-5 w-5 text-clinic-blue" />
+              <h3 className="text-lg font-black text-clinic-navy">病例图像与诊断解释</h3>
+            </div>
+            <div className="mt-4 rounded-2xl border border-[#CDE8F7] bg-[#F8FBFF] p-3">
+              {imagePreview ? (
+                <img src={imagePreview} alt="乳腺超声病例图像" className="max-h-[360px] w-full rounded-xl object-contain" />
+              ) : (
+                <div className="grid min-h-64 place-items-center rounded-xl bg-white text-sm font-bold text-slate-500">未上传病例图像</div>
+              )}
+            </div>
+            <div className="mt-4 grid gap-3">
+              <MiniStat label="BI-RADS" value={diagnosis.birads} />
+              <MiniStat label="Cancer 预测" value={diagnosis.cancer} />
+              <MiniStat label="恶性风险概率" value={`${diagnosis.probability}%`} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-clinic-line bg-white p-5 shadow-soft">
+            <h3 className="text-lg font-black text-clinic-navy">可解释性证据标签</h3>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <span key={tag.id} className="pill border-[#B7F1E9] bg-[#F0FDFA]">
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-3">
         <button className="primary-button" onClick={copyReport}>
@@ -1077,8 +1156,32 @@ function StepFive({ reportText, copyReport, copyState, exportWord, exportPdf }) 
           <Download className="h-4 w-4" />
           导出 Word
         </button>
+        <button className="secondary-button" onClick={onBack}>
+          <ArrowRight className="h-4 w-4 rotate-180" />
+          返回诊断
+        </button>
+        <button className="secondary-button" onClick={onRestart}>
+          <RotateCcw className="h-4 w-4" />
+          重新录入
+        </button>
       </div>
     </div>
+  );
+}
+
+function FormattedReport({ reportText }) {
+  const lines = reportText.split("\n");
+  const title = lines.shift() || "乳影智诊 BreastCare-VL AI 辅助筛查报告";
+  const subtitle = lines[0]?.includes("Copilot") ? lines.shift() : "面向基层乳腺超声筛查的多模态智能诊断 Copilot";
+  const body = lines.join("\n").trim();
+  return (
+    <article className="report-paper max-h-[640px] overflow-auto rounded-2xl bg-white p-6 shadow-inner">
+      <header className="border-b border-[#D8E7F3] pb-5 text-center">
+        <h2 className="text-2xl font-black leading-9 text-clinic-navy md:text-3xl">{title}</h2>
+        <p className="mt-2 text-base font-black text-slate-800">{subtitle}</p>
+      </header>
+      <pre className="mt-5 whitespace-pre-wrap text-sm font-medium leading-8 text-slate-800">{body}</pre>
+    </article>
   );
 }
 
@@ -1232,11 +1335,19 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
   );
 }
 
-function TextField({ label, value, onChange, type = "text" }) {
+function TextField({ label, value, onChange, type = "text", inputMode, maxLength, placeholder }) {
   return (
     <label>
       <span className="label">{label}</span>
-      <input className="field" type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        className="field"
+        type={type}
+        value={value}
+        inputMode={inputMode}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }

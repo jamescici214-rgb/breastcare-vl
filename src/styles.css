@@ -45,15 +45,15 @@ textarea {
   position: relative;
   isolation: isolate;
   display: flex;
-  width: min(100%, 460px);
+  width: min(100%, 640px);
   align-items: center;
-  gap: 18px;
+  gap: 24px;
   overflow: hidden;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.48);
   background: linear-gradient(135deg, #26d7b4 0%, #00afa5 46%, #1e88e5 100%);
   box-shadow: 0 22px 45px rgba(0, 175, 165, 0.18);
-  padding: 20px 24px;
+  padding: 26px 34px;
 }
 
 .sues-logo-card::after {
