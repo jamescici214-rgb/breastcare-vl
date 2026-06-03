@@ -393,11 +393,13 @@ function renderReportSectionsHtml(reportText) {
     .join("");
 }
 
-function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, imageQc, reportQc, confidence }) {
+function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, imageQc, reportQc, confidence, fields }) {
   const lines = reportText.split("\n");
   const title = lines.shift() || "乳影智诊 BreastCare-VL AI 辅助筛查报告";
   const subtitle = lines[0]?.includes("Copilot") ? lines.shift() : "面向基层乳腺超声筛查的多模态智能诊断 Copilot";
-  const sectionText = [title, subtitle, ...lines].join("\n");
+  // Drop the original "一、病例信息" section from the body — we render it as a structured table.
+  const filteredLines = stripCaseInfoSection(lines);
+  const sectionText = [title, subtitle, ...filteredLines].join("\n");
   const imageBlock = imageDataUrl
     ? `<img class="case-image" src="${imageDataUrl}" alt="乳腺超声病例图像" />`
     : `<div class="image-placeholder">未上传病例图像</div>`;
@@ -405,67 +407,158 @@ function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, i
     ? tags.map((tag) => `<span>${escapeHtml(tag.label)}</span>`).join("")
     : "<span>未见明确标签</span>";
 
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const reportId = `BCVL-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+  const caseRows = [
+    ["年龄", fields?.age ? `${fields.age} 岁` : "未填写"],
+    ["病灶位置", fields?.location || "未填写"],
+    ["病灶大小", fields?.size || "未填写"],
+    ["报告编号", reportId],
+    ["报告日期", `${dateStr} ${timeStr}`],
+    ["推理来源", diagnosis.source || "规则推理兜底"]
+  ];
+  const caseTable = caseRows
+    .map(
+      ([k, v]) =>
+        `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`
+    )
+    .join("");
+
   return `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(title)} · ${escapeHtml(reportId)}</title>
   <style>
-    @page { size: A4; margin: 15mm; }
+    @page {
+      size: A4;
+      margin: 14mm 12mm 16mm 12mm;
+      @bottom-left {
+        content: "BreastCare-VL · 上海工程技术大学 · 科研展示";
+        font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+        font-size: 9pt;
+        color: #64748B;
+      }
+      @bottom-right {
+        content: "第 " counter(page) " / " counter(pages) " 页";
+        font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+        font-size: 9pt;
+        color: #64748B;
+      }
+    }
     * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
     body {
-      margin: 0;
       color: #0B3551;
       background: #F6FAFD;
       font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .page {
-      min-height: 100vh;
+      max-width: 190mm;
+      margin: 12px auto;
       background: #fff;
       border: 1px solid #D8E7F3;
-      border-radius: 18px;
-      padding: 28px;
+      border-radius: 14px;
+      padding: 24px 26px 28px;
     }
-    .header {
-      text-align: center;
-      padding: 14px 18px 22px;
-      border-bottom: 2px solid #D8E7F3;
-    }
-    h1 {
-      margin: 0;
-      font-size: 26px;
-      line-height: 1.35;
-      font-weight: 900;
-      letter-spacing: 0;
-    }
-    .subtitle {
-      margin-top: 8px;
-      color: #334155;
-      font-size: 15px;
-      font-weight: 800;
-    }
-    .summary {
+
+    /* ===== Report banner ===== */
+    .banner {
       display: grid;
-      grid-template-columns: 1.06fr .94fr;
-      gap: 18px;
-      margin-top: 22px;
+      grid-template-columns: 64px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 3px double #1E88E5;
+    }
+    .banner-logo {
+      width: 64px;
+      height: 64px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #E7F8F5, #E3F0FB);
+      border: 1px solid #CBE3F4;
+      padding: 8px;
+    }
+    .banner-logo svg { width: 100%; height: 100%; display: block; }
+    .banner-title { line-height: 1.3; }
+    .banner-title h1 {
+      margin: 0;
+      font-size: 20pt;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #0B3551;
+    }
+    .banner-title .sub {
+      margin-top: 4px;
+      color: #1E88E5;
+      font-size: 10pt;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .banner-title .org {
+      margin-top: 6px;
+      font-size: 10pt;
+      color: #475569;
+      font-weight: 700;
+    }
+    .banner-meta {
+      text-align: right;
+      font-size: 9pt;
+      color: #475569;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+    .banner-meta b { color: #0B3551; }
+
+    /* ===== Section: case + image + diagnosis ===== */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1.04fr 0.96fr;
+      gap: 14px;
+      margin-top: 16px;
       align-items: stretch;
     }
-    .image-card,
-    .diagnosis-card,
-    .report-section {
+    .panel {
       break-inside: avoid;
       border: 1px solid #D8E7F3;
-      border-radius: 16px;
+      border-radius: 12px;
       background: #F8FBFF;
-      padding: 16px;
+      padding: 14px 16px;
     }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 10px;
+      color: #0B3551;
+      font-size: 11pt;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+    }
+    .panel-title::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 14px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #1E88E5, #00AFA5);
+    }
+
     .case-image {
       display: block;
       width: 100%;
-      max-height: 280px;
+      max-height: 260px;
       object-fit: contain;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #fff;
       border: 1px solid #E5EEF6;
     }
@@ -473,105 +566,193 @@ function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, i
       min-height: 220px;
       display: grid;
       place-items: center;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #fff;
       color: #64748B;
       font-weight: 700;
+      border: 1px dashed #CBD5E1;
     }
-    .card-title {
-      margin: 0 0 12px;
+
+    /* ===== Case info table ===== */
+    table.case-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+    }
+    table.case-table th,
+    table.case-table td {
+      padding: 7px 10px;
+      border: 1px solid #D8E7F3;
+      text-align: left;
+      vertical-align: middle;
+    }
+    table.case-table th {
+      width: 32%;
+      background: #EFF6FB;
       color: #0B3551;
-      font-size: 16px;
-      font-weight: 900;
+      font-weight: 800;
     }
+    table.case-table td {
+      color: #1F2937;
+      font-weight: 600;
+      background: #fff;
+    }
+
+    /* ===== Diagnosis metrics ===== */
     .metrics {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
     .metric {
       border: 1px solid #D8E7F3;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #fff;
-      padding: 10px 12px;
+      padding: 8px 10px;
     }
     .metric b {
       display: block;
       color: #64748B;
-      font-size: 11px;
-      margin-bottom: 5px;
+      font-size: 8.5pt;
+      margin-bottom: 3px;
+      font-weight: 700;
     }
     .metric strong {
       color: #0B3551;
-      font-size: 17px;
+      font-size: 13pt;
       font-weight: 900;
     }
+
     .tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
+      gap: 6px;
+      margin-top: 10px;
     }
     .tags span {
       border: 1px solid #B7F1E9;
       background: #F0FDFA;
       border-radius: 999px;
       color: #075E64;
-      font-size: 12px;
+      font-size: 9pt;
       font-weight: 800;
-      padding: 6px 10px;
+      padding: 4px 9px;
     }
+
+    /* ===== Report sections ===== */
     .sections {
       display: grid;
-      gap: 12px;
-      margin-top: 18px;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .report-section {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      border: 1px solid #D8E7F3;
+      border-radius: 12px;
+      background: #F8FBFF;
+      padding: 12px 14px;
     }
     .report-section h2 {
-      margin: 0 0 10px;
+      margin: 0 0 8px;
       color: #0B3551;
-      font-size: 16px;
+      font-size: 11pt;
       font-weight: 900;
+      padding-left: 10px;
+      border-left: 4px solid #1E88E5;
     }
     .report-section p,
     .report-section pre {
-      margin: 6px 0;
+      margin: 4px 0;
       white-space: pre-wrap;
       color: #1F2937;
-      font-size: 13px;
-      line-height: 1.75;
-      font-weight: 600;
+      font-size: 10pt;
+      line-height: 1.7;
+      font-weight: 500;
     }
+
     .disclaimer {
-      margin-top: 18px;
+      margin-top: 16px;
       border: 1px solid #FECACA;
-      border-radius: 14px;
+      border-radius: 12px;
       background: #FEF2F2;
       color: #B91C1C;
-      padding: 12px 14px;
+      padding: 10px 14px;
       text-align: center;
-      font-size: 12px;
-      font-weight: 900;
-      line-height: 1.7;
+      font-size: 9pt;
+      font-weight: 800;
+      line-height: 1.6;
     }
+
+    .signature {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      font-size: 9.5pt;
+      color: #334155;
+    }
+    .signature .sig-box {
+      border-top: 1px solid #CBD5E1;
+      padding-top: 6px;
+      min-height: 38px;
+    }
+    .signature .sig-box b { color: #0B3551; }
+
     @media print {
       body { background: #fff; }
-      .page { border: 0; border-radius: 0; padding: 0; }
+      .page {
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+      .top-grid { gap: 10px; }
     }
   </style>
 </head>
 <body>
   <main class="page">
-    <header class="header">
-      <h1>${escapeHtml(title)}</h1>
-      <div class="subtitle">${escapeHtml(subtitle)}</div>
+    <header class="banner">
+      <div class="banner-logo">
+        <svg viewBox="0 0 351 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="校徽">
+          <g fill="#0B3551" fill-rule="evenodd">
+            <path d="M54 50 L53 104 L165 175 L54 175 L53 254 L165 325 L164 296 L56 228 L58 227 L165 259 L165 233 L56 201 L165 200 L165 146 L54 76 L165 75 L165 50 Z"/>
+            <path d="M179 50 L178 168 L202 169 L203 52 L200 50 Z"/>
+            <path d="M266 50 L266 169 L290 169 L290 50 Z"/>
+            <path d="M179 175 L178 229 L285 296 L289 300 L179 300 L178 325 L290 325 L290 271 L179 201 L290 200 L290 176 Z"/>
+          </g>
+        </svg>
+      </div>
+      <div class="banner-title">
+        <h1>${escapeHtml(title)}</h1>
+        <div class="sub">${escapeHtml(subtitle)}</div>
+        <div class="org">上海工程技术大学 · Shanghai University of Engineering Science</div>
+      </div>
+      <div class="banner-meta">
+        <div><b>报告编号</b> ${escapeHtml(reportId)}</div>
+        <div><b>报告日期</b> ${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</div>
+        <div><b>BI-RADS</b> ${escapeHtml(diagnosis.birads)}</div>
+      </div>
     </header>
-    <section class="summary">
-      <div class="image-card">
-        <p class="card-title">乳腺超声病例图像</p>
+
+    <section class="top-grid">
+      <div class="panel">
+        <p class="panel-title">一、病例信息</p>
+        <table class="case-table">
+          <tbody>${caseTable}</tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <p class="panel-title">乳腺超声病例图像</p>
         ${imageBlock}
       </div>
-      <div class="diagnosis-card">
-        <p class="card-title">AI 诊断摘要</p>
+    </section>
+
+    <section class="top-grid">
+      <div class="panel">
+        <p class="panel-title">AI 诊断摘要</p>
         <div class="metrics">
           <div class="metric"><b>BI-RADS</b><strong>${escapeHtml(diagnosis.birads)}</strong></div>
           <div class="metric"><b>Cancer 预测</b><strong>${escapeHtml(diagnosis.cancer)}</strong></div>
@@ -580,16 +761,40 @@ function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, i
           <div class="metric"><b>图像质控</b><strong>${escapeHtml(imageQc.score)}/100</strong></div>
           <div class="metric"><b>报告完整性</b><strong>${escapeHtml(reportQc.score)}/100</strong></div>
         </div>
+      </div>
+      <div class="panel">
+        <p class="panel-title">标准化证据标签</p>
         <div class="tags">${evidenceTags}</div>
       </div>
     </section>
+
     <section class="sections">
       ${renderReportSectionsHtml(sectionText)}
     </section>
+
+    <section class="signature">
+      <div class="sig-box"><b>AI 审核：</b> BreastCare-VL · Qwen2.5-VL + LoRA</div>
+      <div class="sig-box"><b>医师签名：</b> ____________________</div>
+    </section>
+
     <div class="disclaimer">本系统仅用于科研展示和乳腺超声辅助筛查，不替代医生最终诊断。AI 输出结果需由专业医生结合影像、病理和临床资料综合判断。</div>
   </main>
 </body>
 </html>`;
+}
+
+function stripCaseInfoSection(lines) {
+  // Removes the auto-generated "一、病例信息" block since we render it as a table.
+  const idx = lines.findIndex((line) => /^一、病例信息/.test(line.trim()));
+  if (idx === -1) return lines;
+  let end = lines.length;
+  for (let i = idx + 1; i < lines.length; i += 1) {
+    if (/^[一二三四五六七八九十]+、/.test(lines[i].trim())) {
+      end = i;
+      break;
+    }
+  }
+  return [...lines.slice(0, idx), ...lines.slice(end)];
 }
 
 async function analyzeImageFile(file) {
@@ -802,23 +1007,18 @@ function SchoolLogoShowcase() {
       <span className="school-scan-line" />
       <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
         <div className="sues-logo-card" aria-label="上海工程技术大学 Shanghai University of Engineering Science">
-          <svg className="h-24 w-24 shrink-0 text-white" viewBox="0 0 160 160" role="img" aria-hidden="true" shapeRendering="crispEdges">
-            <g fill="currentColor">
-              <rect x="18" y="16" width="88" height="22" />
-              <polygon points="18,45 106,98 106,124 18,70" />
-              <rect x="18" y="88" width="72" height="22" />
-              <polygon points="18,116 94,150 94,128 18,94" />
-              <polygon points="18,128 78,158 78,137 18,107" />
-              <rect x="108" y="16" width="22" height="82" />
-              <rect x="140" y="16" width="22" height="82" />
-              <rect x="108" y="88" width="54" height="22" />
-              <polygon points="108,116 162,150 162,128 108,94" />
-              <rect x="108" y="138" width="54" height="22" />
-            </g>
-          </svg>
+          <div className="sues-logo-emblem">
+            <img
+              src="/assets/sues-logo.svg"
+              alt="上海工程技术大学 校徽"
+              className="sues-logo-img"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
           <div className="leading-none">
-            <p className="text-2xl font-black tracking-wide text-white md:text-4xl">上海工程技术大学</p>
-            <p className="mt-3 max-w-[520px] text-sm font-black uppercase leading-5 tracking-wide text-white/95 md:text-xl">
+            <p className="text-2xl font-black tracking-wide text-white md:text-3xl">上海工程技术大学</p>
+            <p className="mt-2 max-w-[520px] text-xs font-black uppercase leading-5 tracking-wide text-white/95 md:text-base">
               Shanghai University of Engineering Science
             </p>
           </div>
@@ -1050,7 +1250,8 @@ function DiagnosisWorkspace() {
         tags,
         imageQc,
         reportQc,
-        confidence
+        confidence,
+        fields
       })
     );
     win.document.close();
