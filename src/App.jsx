@@ -360,6 +360,238 @@ ${diagnosis.recommendation}
 本系统仅用于科研展示和乳腺超声辅助筛查，不替代医生最终诊断。AI 输出结果需由专业医生结合影像、病理和临床资料综合判断。`;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderReportSectionsHtml(reportText) {
+  const normalized = reportText.replace(/\r\n/g, "\n").trim();
+  const sectionMatches = [...normalized.matchAll(/(?:^|\n)([一二三四五六七八九十]+、[^\n]+)\n/g)];
+  if (!sectionMatches.length) {
+    return `<section class="report-section"><pre>${escapeHtml(normalized)}</pre></section>`;
+  }
+
+  return sectionMatches
+    .map((match, index) => {
+      const titleStart = match.index + (match[0].startsWith("\n") ? 1 : 0);
+      const bodyStart = titleStart + match[1].length + 1;
+      const nextStart = sectionMatches[index + 1]?.index ?? normalized.length;
+      const body = normalized.slice(bodyStart, nextStart).trim();
+      const items = body
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => `<p>${escapeHtml(line)}</p>`)
+        .join("");
+      return `<section class="report-section"><h2>${escapeHtml(match[1])}</h2>${items}</section>`;
+    })
+    .join("");
+}
+
+function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, imageQc, reportQc, confidence }) {
+  const lines = reportText.split("\n");
+  const title = lines.shift() || "乳影智诊 BreastCare-VL AI 辅助筛查报告";
+  const subtitle = lines[0]?.includes("Copilot") ? lines.shift() : "面向基层乳腺超声筛查的多模态智能诊断 Copilot";
+  const sectionText = [title, subtitle, ...lines].join("\n");
+  const imageBlock = imageDataUrl
+    ? `<img class="case-image" src="${imageDataUrl}" alt="乳腺超声病例图像" />`
+    : `<div class="image-placeholder">未上传病例图像</div>`;
+  const evidenceTags = tags.length
+    ? tags.map((tag) => `<span>${escapeHtml(tag.label)}</span>`).join("")
+    : "<span>未见明确标签</span>";
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #0B3551;
+      background: #F6FAFD;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    .page {
+      min-height: 100vh;
+      background: #fff;
+      border: 1px solid #D8E7F3;
+      border-radius: 18px;
+      padding: 28px;
+    }
+    .header {
+      text-align: center;
+      padding: 14px 18px 22px;
+      border-bottom: 2px solid #D8E7F3;
+    }
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.35;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin-top: 8px;
+      color: #334155;
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: 1.06fr .94fr;
+      gap: 18px;
+      margin-top: 22px;
+      align-items: stretch;
+    }
+    .image-card,
+    .diagnosis-card,
+    .report-section {
+      break-inside: avoid;
+      border: 1px solid #D8E7F3;
+      border-radius: 16px;
+      background: #F8FBFF;
+      padding: 16px;
+    }
+    .case-image {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #E5EEF6;
+    }
+    .image-placeholder {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #fff;
+      color: #64748B;
+      font-weight: 700;
+    }
+    .card-title {
+      margin: 0 0 12px;
+      color: #0B3551;
+      font-size: 16px;
+      font-weight: 900;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .metric {
+      border: 1px solid #D8E7F3;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+    }
+    .metric b {
+      display: block;
+      color: #64748B;
+      font-size: 11px;
+      margin-bottom: 5px;
+    }
+    .metric strong {
+      color: #0B3551;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .tags span {
+      border: 1px solid #B7F1E9;
+      background: #F0FDFA;
+      border-radius: 999px;
+      color: #075E64;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 10px;
+    }
+    .sections {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .report-section h2 {
+      margin: 0 0 10px;
+      color: #0B3551;
+      font-size: 16px;
+      font-weight: 900;
+    }
+    .report-section p,
+    .report-section pre {
+      margin: 6px 0;
+      white-space: pre-wrap;
+      color: #1F2937;
+      font-size: 13px;
+      line-height: 1.75;
+      font-weight: 600;
+    }
+    .disclaimer {
+      margin-top: 18px;
+      border: 1px solid #FECACA;
+      border-radius: 14px;
+      background: #FEF2F2;
+      color: #B91C1C;
+      padding: 12px 14px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.7;
+    }
+    @media print {
+      body { background: #fff; }
+      .page { border: 0; border-radius: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>${escapeHtml(title)}</h1>
+      <div class="subtitle">${escapeHtml(subtitle)}</div>
+    </header>
+    <section class="summary">
+      <div class="image-card">
+        <p class="card-title">乳腺超声病例图像</p>
+        ${imageBlock}
+      </div>
+      <div class="diagnosis-card">
+        <p class="card-title">AI 诊断摘要</p>
+        <div class="metrics">
+          <div class="metric"><b>BI-RADS</b><strong>${escapeHtml(diagnosis.birads)}</strong></div>
+          <div class="metric"><b>Cancer 预测</b><strong>${escapeHtml(diagnosis.cancer)}</strong></div>
+          <div class="metric"><b>恶性风险概率</b><strong>${escapeHtml(diagnosis.probability)}%</strong></div>
+          <div class="metric"><b>诊断可信度</b><strong>${escapeHtml(confidence)}/100</strong></div>
+          <div class="metric"><b>图像质控</b><strong>${escapeHtml(imageQc.score)}/100</strong></div>
+          <div class="metric"><b>报告完整性</b><strong>${escapeHtml(reportQc.score)}/100</strong></div>
+        </div>
+        <div class="tags">${evidenceTags}</div>
+      </div>
+    </section>
+    <section class="sections">
+      ${renderReportSectionsHtml(sectionText)}
+    </section>
+    <div class="disclaimer">本系统仅用于科研展示和乳腺超声辅助筛查，不替代医生最终诊断。AI 输出结果需由专业医生结合影像、病理和临床资料综合判断。</div>
+  </main>
+</body>
+</html>`;
+}
+
 async function analyzeImageFile(file) {
   if (!file) {
     return {
@@ -570,11 +802,19 @@ function SchoolLogoShowcase() {
       <span className="school-scan-line" />
       <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
         <div className="sues-logo-card" aria-label="上海工程技术大学 Shanghai University of Engineering Science">
-          <svg className="h-20 w-20 shrink-0 text-white" viewBox="0 0 120 120" role="img" aria-hidden="true">
-            <path d="M14 17h18v86H14z" fill="currentColor" />
-            <path d="M39 17h27v18H39zM39 44l51 34v20L39 64zM39 74l48 20v18L39 93z" fill="currentColor" opacity=".98" />
-            <path d="M73 17h17v49H73zM98 17h18v49H98zM73 75h43v18H73zM73 101h43v18H73z" fill="currentColor" />
-            <path d="M14 17l52 49v22L14 39zM73 75l43 26v18L73 93z" fill="currentColor" opacity=".72" />
+          <svg className="h-24 w-24 shrink-0 text-white" viewBox="0 0 160 160" role="img" aria-hidden="true">
+            <g fill="currentColor">
+              <rect x="18" y="16" width="88" height="22" />
+              <polygon points="18,45 106,98 106,124 18,70" />
+              <rect x="18" y="88" width="72" height="22" />
+              <polygon points="18,116 94,150 94,128 18,94" />
+              <polygon points="18,128 78,158 78,137 18,107" />
+              <rect x="108" y="16" width="22" height="82" />
+              <rect x="140" y="16" width="22" height="82" />
+              <rect x="108" y="88" width="54" height="22" />
+              <polygon points="108,116 162,150 162,128 108,94" />
+              <rect x="108" y="138" width="54" height="22" />
+            </g>
           </svg>
           <div className="leading-none">
             <p className="text-2xl font-black tracking-wide text-white md:text-4xl">上海工程技术大学</p>
@@ -802,10 +1042,29 @@ function DiagnosisWorkspace() {
   const exportPdf = () => {
     const win = window.open("", "_blank", "width=900,height=1100");
     if (!win) return;
-    win.document.write(`<html><head><title>AI 辅助筛查报告</title><meta charset="utf-8"></head><body><pre style="font-family:Microsoft YaHei,Arial;white-space:pre-wrap;line-height:1.75;font-size:14px">${reportText}</pre></body></html>`);
+    win.document.write(
+      buildPrintableReportHtml({
+        reportText,
+        imageDataUrl,
+        diagnosis,
+        tags,
+        imageQc,
+        reportQc,
+        confidence
+      })
+    );
     win.document.close();
-    win.focus();
-    win.print();
+    const printReport = () => {
+      win.focus();
+      win.print();
+    };
+    const image = win.document.querySelector(".case-image");
+    if (image && !image.complete) {
+      image.addEventListener("load", () => window.setTimeout(printReport, 250), { once: true });
+      image.addEventListener("error", () => window.setTimeout(printReport, 250), { once: true });
+    } else {
+      window.setTimeout(printReport, 250);
+    }
   };
 
   return (
