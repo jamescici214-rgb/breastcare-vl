@@ -798,29 +798,42 @@ function LandingPage({ setPage }) {
 
 function SchoolLogoShowcase() {
   return (
-    <section className="clinical-card school-logo-panel mt-6 overflow-hidden p-5 lg:p-7">
+    <section className="clinical-card school-logo-panel mt-6 overflow-hidden p-6 lg:p-8">
       <span className="school-scan-line" />
-      <div className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+      <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
         <div className="sues-logo-card" aria-label="上海工程技术大学 Shanghai University of Engineering Science">
-          <SuesLogoMark className="sues-logo-mark" />
-          <div className="min-w-0 leading-none">
-            <p className="text-3xl font-black tracking-wide text-white md:text-5xl">上海工程技术大学</p>
-            <p className="mt-4 max-w-[700px] text-base font-black uppercase leading-6 tracking-wide text-white md:text-2xl md:leading-8">
+          <svg className="h-24 w-24 shrink-0 text-white" viewBox="0 0 160 160" role="img" aria-hidden="true" shapeRendering="crispEdges">
+            <g fill="currentColor">
+              <rect x="18" y="16" width="88" height="22" />
+              <polygon points="18,45 106,98 106,124 18,70" />
+              <rect x="18" y="88" width="72" height="22" />
+              <polygon points="18,116 94,150 94,128 18,94" />
+              <polygon points="18,128 78,158 78,137 18,107" />
+              <rect x="108" y="16" width="22" height="82" />
+              <rect x="140" y="16" width="22" height="82" />
+              <rect x="108" y="88" width="54" height="22" />
+              <polygon points="108,116 162,150 162,128 108,94" />
+              <rect x="108" y="138" width="54" height="22" />
+            </g>
+          </svg>
+          <div className="leading-none">
+            <p className="text-2xl font-black tracking-wide text-white md:text-4xl">上海工程技术大学</p>
+            <p className="mt-3 max-w-[520px] text-sm font-black uppercase leading-5 tracking-wide text-white/95 md:text-xl">
               Shanghai University of Engineering Science
             </p>
           </div>
         </div>
 
-        <div className="max-w-xl xl:text-right">
-          <div className="pill bg-white/85 xl:ml-auto">
+        <div className="max-w-3xl">
+          <div className="pill bg-white/80">
             <Sparkles className="h-4 w-4 text-clinic-teal" />
             Shanghai University of Engineering Science
           </div>
-          <h2 className="mt-4 text-2xl font-black text-clinic-navy lg:text-3xl">BreastCare-VL 医疗 AI 创新展示</h2>
-          <p className="mt-3 text-sm font-semibold leading-7 text-slate-600">
+          <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">上海工程技术大学 · BreastCare-VL</h2>
+          <p className="mt-4 text-base leading-8 text-slate-600">
             医疗 AI 创新展示项目，聚焦基层乳腺超声筛查、多模态诊断、BI-RADS 标准化和报告质控闭环。
           </p>
-          <div className="mt-5 flex flex-wrap gap-3 xl:justify-end">
+          <div className="mt-6 flex flex-wrap gap-3">
             {["乳腺超声", "Qwen2.5-VL + LoRA", "结构化证据", "报告导出"].map((item) => (
               <span key={item} className="pill bg-[#F8FBFF]">
                 {item}
@@ -830,32 +843,6 @@ function SchoolLogoShowcase() {
         </div>
       </div>
     </section>
-  );
-}
-
-function SuesLogoMark({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 300 300"
-      role="img"
-      aria-hidden="true"
-      shapeRendering="crispEdges"
-      vectorEffect="non-scaling-stroke"
-    >
-      <g fill="currentColor">
-        <rect x="24" y="26" width="147" height="37" />
-        <polygon points="24,74 171,157 171,195 24,112" />
-        <rect x="24" y="149" width="111" height="37" />
-        <polygon points="24,196 151,247 151,284 24,234" />
-        <polygon points="24,235 123,285 123,248 24,199" />
-        <rect x="189" y="26" width="37" height="127" />
-        <rect x="258" y="26" width="37" height="127" />
-        <rect x="189" y="149" width="106" height="37" />
-        <polygon points="189,197 295,259 295,296 189,234" />
-        <rect x="189" y="259" width="106" height="37" />
-      </g>
-    </svg>
   );
 }
 
