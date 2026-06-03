@@ -45,15 +45,17 @@ textarea {
   position: relative;
   isolation: isolate;
   display: flex;
-  width: min(100%, 640px);
+  width: min(100%, 960px);
   align-items: center;
-  gap: 24px;
+  gap: clamp(18px, 3vw, 44px);
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.48);
-  background: linear-gradient(135deg, #26d7b4 0%, #00afa5 46%, #1e88e5 100%);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.18), transparent 28%),
+    linear-gradient(135deg, #30e4d2 0%, #00d5bf 45%, #1e88e5 100%);
   box-shadow: 0 22px 45px rgba(0, 175, 165, 0.18);
-  padding: 26px 34px;
+  padding: clamp(24px, 4vw, 46px) clamp(26px, 5vw, 58px);
 }
 
 .sues-logo-card::after {
@@ -65,6 +67,14 @@ textarea {
   transform: rotate(18deg);
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
   animation: sues-sheen 5.8s ease-in-out infinite;
+}
+
+.sues-logo-mark {
+  width: clamp(118px, 15vw, 184px);
+  height: clamp(118px, 15vw, 184px);
+  flex: 0 0 auto;
+  color: #fff;
+  filter: drop-shadow(0 10px 18px rgba(0, 75, 110, 0.14));
 }
 
 .school-scan-line {
@@ -110,6 +120,13 @@ textarea {
   .school-scan-line,
   .sues-logo-card::after {
     animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .sues-logo-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
