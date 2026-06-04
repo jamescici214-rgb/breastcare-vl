@@ -1821,17 +1821,53 @@ function TextArea({ label, value, onChange, rows }) {
   );
 }
 
+const CUSTOM_OPTION = "__custom__";
+
 function SelectField({ label, value, onChange, options }) {
+  const [customMode, setCustomMode] = useState(false);
+  // 当前值不在预置选项里（且非空）时，视为自定义输入。
+  const valueIsCustom = value !== "" && !options.includes(value);
+  const isCustom = customMode || valueIsCustom;
+
+  // 若外部把值改回了某个预置选项（例如载入示例病例），自动退出自定义模式。
+  useEffect(() => {
+    if (value !== "" && options.includes(value)) setCustomMode(false);
+  }, [value, options]);
+
   return (
     <label>
       <span className="label">{label}</span>
-      <select className="field" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className="field"
+        value={isCustom ? CUSTOM_OPTION : value}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (next === CUSTOM_OPTION) {
+            setCustomMode(true);
+            onChange("");
+          } else {
+            setCustomMode(false);
+            onChange(next);
+          }
+        }}
+      >
         {options.map((option) => (
           <option key={option || "empty"} value={option}>
             {option || "请选择"}
           </option>
         ))}
+        <option value={CUSTOM_OPTION}>自定义…</option>
       </select>
+      {isCustom && (
+        <input
+          className="field mt-2 bg-white"
+          type="text"
+          value={value}
+          placeholder="输入自定义内容"
+          autoFocus
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
     </label>
   );
 }

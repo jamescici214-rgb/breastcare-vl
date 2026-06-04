@@ -1,3 +1,12 @@
 name = "breastcare-vl"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-05-25"
+
+# 自部署 Qwen2.5-VL 后端（通过 Cloudflare Tunnel 暴露本地 GPU 服务）。
+# 注意：trycloudflare 快速隧道地址是临时的，每次重启 cloudflared 都会变，
+# 变更后需要同步更新此处并重新 push 触发部署；正式使用建议改用命名隧道或固定域名。
+# QWEN_SELF_HOSTED_API_KEY 等机密请放在 Pages 的 Settings > Variables and Secrets，不要写在此文件。
+[vars]
+QWEN_BACKEND_MODE = "self-hosted"
+QWEN_SELF_HOSTED_URL = "https://rays-wolf-impaired-endif.trycloudflare.com/v1/breastcare/diagnose"
+QWEN_SELF_HOSTED_MODEL = "qwen2.5-vl-7b-lora-epoch-5"
