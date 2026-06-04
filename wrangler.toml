@@ -8,5 +8,5 @@ compatibility_date = "2026-05-25"
 # QWEN_SELF_HOSTED_API_KEY 等机密请放在 Pages 的 Settings > Variables and Secrets，不要写在此文件。
 [vars]
 QWEN_BACKEND_MODE = "self-hosted"
-QWEN_SELF_HOSTED_URL = "https://rays-wolf-impaired-endif.trycloudflare.com/v1/breastcare/diagnose"
+QWEN_SELF_HOSTED_URL = "https://broad-moved-couples-reviewer.trycloudflare.com/v1/breastcare/diagnose"
 QWEN_SELF_HOSTED_MODEL = "qwen2.5-vl-7b-lora-epoch-5"

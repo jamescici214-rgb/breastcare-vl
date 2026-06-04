@@ -203,26 +203,33 @@ class LocalQwenVLService:
 
 
 def build_prompt(request: DiagnoseRequest) -> str:
+    # 与训练数据 (final6.jsonl) 的 prompt 逐字段对齐：
+    #   1) 只保留单一【患者超声报告】块，不追加训练时不存在的【医生原始描述】块
+    #      （否则模型会收到两份格式不同的结构化信息，属于分布外输入，倾向退回中间档 4a）。
+    #   2) 缺失值统一用 "-"，与训练数据中的占位符一致（训练里 "未填写" 从未出现）。
     fields = request.fields or {}
-    lymph_node = fields.get("lymphNode") or fields.get("axillaryNode") or "未描述"
-    raw_report = (request.reportText or "").strip()
-    report_suffix = f"\n\n【医生原始描述】\n{raw_report}" if raw_report else ""
+
+    def f(*keys: str) -> str:
+        for key in keys:
+            value = fields.get(key)
+            if value not in (None, ""):
+                return str(value)
+        return "-"
 
     return f"""你是一位乳腺超声影像诊断AI。请结合【超声图像】和【患者超声报告】综合分析，判断病灶的 BI-RADS 分级以及良恶性结论。
 
 【患者超声报告】
-- 年龄: {fields.get("age") or "未填写"}
-- 位置: {fields.get("location") or "未填写"}
-- 回声特征: {fields.get("echo") or "未填写"}
-- 病灶大小: {fields.get("size") or "未填写"}
-- 纵横比大于1: {fields.get("aspectRatio") or "未填写"}
-- 边缘情况: {fields.get("margin") or "未填写"}
-- 后方回声: {fields.get("posteriorEcho") or "未填写"}
-- 钙化情况: {fields.get("calcification") or "未填写"}
-- 血流信号: {fields.get("bloodFlow") or "未填写"}
-- 导管改变: {fields.get("ductChange") or "未描述"}
-- 淋巴结状态: {lymph_node}
-{report_suffix}
+- 年龄: {f("age")}
+- 位置: {f("location")}
+- 回声特征: {f("echo")}
+- 病灶大小: {f("size")}
+- 纵横比大于1: {f("aspectRatio")}
+- 边缘情况: {f("margin")}
+- 后方回声: {f("posteriorEcho")}
+- 钙化情况: {f("calcification")}
+- 血流信号: {f("bloodFlow")}
+- 导管改变: {f("ductChange")}
+- 淋巴结状态: {f("lymphNode", "axillaryNode")}
 
 【输出要求】
 - 禁止输出解释、过程或多余文字
