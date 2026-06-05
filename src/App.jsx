@@ -1027,11 +1027,11 @@ function SchoolLogoShowcase() {
         <div className="max-w-3xl">
           <div className="pill bg-white/80">
             <Sparkles className="h-4 w-4 text-clinic-teal" />
-            Shanghai University of Engineering Science
+            医疗 AI 创新展示项目
           </div>
-          <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">上海工程技术大学 · BreastCare-VL</h2>
+          <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">基层乳腺超声筛查 · 多模态智能诊断</h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
-            医疗 AI 创新展示项目，聚焦基层乳腺超声筛查、多模态诊断、BI-RADS 标准化和报告质控闭环。
+            聚焦基层乳腺超声筛查、多模态智能诊断、BI-RADS 标准化与报告质控闭环，让 AI 辅助贯穿筛查全流程。
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             {["乳腺超声", "Qwen2.5-VL + LoRA", "结构化证据", "报告导出"].map((item) => (
