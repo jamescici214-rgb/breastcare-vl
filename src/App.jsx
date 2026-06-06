@@ -38,6 +38,11 @@ import {
   YAxis
 } from "recharts";
 
+// ⚙️ 学校标识总开关：
+//   false = 匿名展示（答辩用，隐藏所有“上海工程技术大学 / Shanghai University of Engineering Science”标识）
+//   true  = 恢复原样（答辩结束后改回 true 即可还原首页校徽面板与报告页眉/页脚的学校标识）
+const SHOW_SCHOOL_BRANDING = false;
+
 const SAMPLE_CASES = {
   case_001: {
     label: "case_001 偏良性",
@@ -438,7 +443,7 @@ function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, i
       size: A4;
       margin: 14mm 12mm 16mm 12mm;
       @bottom-left {
-        content: "BreastCare-VL · 上海工程技术大学 · 科研展示";
+        content: "${SHOW_SCHOOL_BRANDING ? "BreastCare-VL · 上海工程技术大学 · 科研展示" : "BreastCare-VL · 科研展示"}";
         font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
         font-size: 9pt;
         color: #64748B;
@@ -715,7 +720,7 @@ function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, i
 <body>
   <main class="page">
     <header class="banner">
-      <div class="banner-logo">
+      ${SHOW_SCHOOL_BRANDING ? `<div class="banner-logo">
         <svg viewBox="0 0 351 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="校徽">
           <g fill="#0B3551" fill-rule="evenodd">
             <path d="M54 50 L53 104 L165 175 L54 175 L53 254 L165 325 L164 296 L56 228 L58 227 L165 259 L165 233 L56 201 L165 200 L165 146 L54 76 L165 75 L165 50 Z"/>
@@ -724,11 +729,16 @@ function buildPrintableReportHtml({ reportText, imageDataUrl, diagnosis, tags, i
             <path d="M179 175 L178 229 L285 296 L289 300 L179 300 L178 325 L290 325 L290 271 L179 201 L290 200 L290 176 Z"/>
           </g>
         </svg>
-      </div>
+      </div>` : `<div class="banner-logo">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BreastCare-VL">
+          <rect x="4" y="4" width="56" height="56" rx="14" fill="#0B3551"/>
+          <path d="M13 34 L25 34 L30 22 L37 45 L42 34 L51 34" fill="none" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>`}
       <div class="banner-title">
         <h1>${escapeHtml(title)}</h1>
         <div class="sub">${escapeHtml(subtitle)}</div>
-        <div class="org">上海工程技术大学 · Shanghai University of Engineering Science</div>
+        ${SHOW_SCHOOL_BRANDING ? '<div class="org">上海工程技术大学 · Shanghai University of Engineering Science</div>' : '<div class="org">面向基层乳腺超声筛查的多模态智能诊断 Copilot</div>'}
       </div>
       <div class="banner-meta">
         <div><b>报告编号</b> ${escapeHtml(reportId)}</div>
@@ -1002,6 +1012,51 @@ function LandingPage({ setPage }) {
 }
 
 function SchoolLogoShowcase() {
+  if (!SHOW_SCHOOL_BRANDING) {
+    return (
+      <section className="clinical-card school-logo-panel mt-6 overflow-hidden p-6 lg:p-8">
+        <span className="school-scan-line" />
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr] lg:items-center">
+          <div className="sues-logo-card" aria-label="BreastCare-VL 多模态乳腺超声 AI">
+            <div className="sues-logo-emblem grid place-items-center">
+              <HeartPulse className="h-12 w-12 text-clinic-navy" />
+            </div>
+            <div className="leading-none">
+              <p className="text-2xl font-black tracking-wide text-white md:text-3xl">BreastCare-VL</p>
+              <p className="mt-2 max-w-[520px] text-xs font-black uppercase leading-5 tracking-wide text-white/95 md:text-base">
+                Multimodal Breast Ultrasound AI
+              </p>
+            </div>
+          </div>
+
+          <div className="max-w-3xl">
+            <div className="pill bg-white/80">
+              <Sparkles className="h-4 w-4 text-clinic-teal" />
+              医疗 AI 创新展示项目
+            </div>
+            <h2 className="mt-4 text-3xl font-black text-clinic-navy lg:text-4xl">基层乳腺超声筛查 · 多模态智能诊断</h2>
+            <p className="mt-4 text-base leading-8 text-slate-600">
+              聚焦基层乳腺超声筛查、多模态智能诊断、BI-RADS 标准化与报告质控闭环，让 AI 辅助贯穿筛查全流程。
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                { icon: Layers3, title: "多模态融合", desc: "图像 + 结构化报告 + 原始描述联合推理" },
+                { icon: BadgeCheck, title: "BI-RADS 标准化", desc: "基层描述自动映射为标准特征标签" },
+                { icon: ShieldCheck, title: "报告质控闭环", desc: "图像质量 · 完整性 · 诊断可信度评分" }
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="rounded-2xl border border-clinic-line bg-white/80 p-4">
+                  <Icon className="h-5 w-5 text-clinic-teal" />
+                  <p className="mt-2 text-sm font-black text-clinic-navy">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="clinical-card school-logo-panel mt-6 overflow-hidden p-6 lg:p-8">
       <span className="school-scan-line" />
