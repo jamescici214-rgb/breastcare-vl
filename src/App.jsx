@@ -41,7 +41,7 @@ import {
 // ⚙️ 学校标识总开关：
 //   false = 匿名展示（答辩用，隐藏所有“上海工程技术大学 / Shanghai University of Engineering Science”标识）
 //   true  = 恢复原样（答辩结束后改回 true 即可还原首页校徽面板与报告页眉/页脚的学校标识）
-const SHOW_SCHOOL_BRANDING = false;
+const SHOW_SCHOOL_BRANDING = true;
 
 const SAMPLE_CASES = {
   case_001: {
